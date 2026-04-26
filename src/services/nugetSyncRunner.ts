@@ -18,9 +18,12 @@ async function ensureScript(): Promise<string> {
   const dir = cacheDir();
   fs.mkdirSync(dir, { recursive: true });
   const dst = path.join(dir, 'Sync-D365FONuGet.ps1');
-  if (fs.existsSync(dst)) return dst;
-
-  await downloadFile(SCRIPT_URL, dst);
+  // Always try to refresh from GitHub; fall back to cached copy if offline.
+  try {
+    await downloadFile(SCRIPT_URL, dst);
+  } catch (e) {
+    if (!fs.existsSync(dst)) throw e;
+  }
   return dst;
 }
 
@@ -51,7 +54,7 @@ export interface NuGetSyncRequest {
 /**
  * Runs the existing Sync-D365FONuGet.ps1 script and pipes output to a VS Code OutputChannel.
  */
-export async function runNuGetSync(req: NuGetSyncRequest, channel: vscode.OutputChannel): Promise<number> {
+export async function runNuGetSync(req: NuGetSyncRequest, channel: vscode.OutputChannel, onLine?: (line: string) => void): Promise<number> {
   const script = await ensureScript();
   const args = [
     '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
@@ -69,9 +72,22 @@ export async function runNuGetSync(req: NuGetSyncRequest, channel: vscode.Output
 
   return new Promise<number>((resolve) => {
     const proc = cp.spawn('powershell.exe', args, { windowsHide: true });
-    proc.stdout.on('data', (b) => channel.append(b.toString()));
-    proc.stderr.on('data', (b) => channel.append('[err] ' + b.toString()));
+    let buf = '';
+    const handle = (chunk: string, prefix = '') => {
+      channel.append(prefix + chunk);
+      if (!onLine) return;
+      buf += chunk;
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx).replace(/\r$/, '');
+        buf = buf.slice(idx + 1);
+        onLine(line);
+      }
+    };
+    proc.stdout.on('data', (b) => handle(b.toString()));
+    proc.stderr.on('data', (b) => handle(b.toString(), '[err] '));
     proc.on('close', (code) => {
+      if (buf && onLine) onLine(buf);
       channel.appendLine(`\n[exit ${code}]`);
       resolve(code ?? -1);
     });

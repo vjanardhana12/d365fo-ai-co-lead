@@ -3,6 +3,7 @@ import { Connection, ConnectionStore } from '../services/connectionStore';
 import { IdentityStore } from '../services/identityStore';
 import { ConnectionsTreeProvider, ConnectionItem } from '../views/connectionsTreeProvider';
 import { testProject } from '../services/adoClient';
+import { showForm } from '../views/formWebview';
 
 export function registerConnectionCommands(
   ctx: vscode.ExtensionContext,
@@ -15,7 +16,9 @@ export function registerConnectionCommands(
     vscode.commands.registerCommand('d365fo.connections.add', () => editConnection(undefined)),
     vscode.commands.registerCommand('d365fo.connections.edit', (item: ConnectionItem) => editConnection(item.connection)),
     vscode.commands.registerCommand('d365fo.connections.delete', async (item: ConnectionItem) => {
-      const ok = await vscode.window.showWarningMessage(`Delete connection '${item.connection.name}'?`, { modal: true }, 'Delete');
+      const ok = await vscode.window.showWarningMessage(
+        `Delete connection '${item.connection.name}'?`, { modal: true }, 'Delete',
+      );
       if (ok === 'Delete') {
         connections.delete(item.connection.id);
         tree.refresh();
@@ -40,7 +43,7 @@ export function registerConnectionCommands(
         () => testProject(conn.adoOrgUrl, conn.adoProject, id.email, pat),
       );
       if (result.ok) {
-        vscode.window.showInformationMessage(`Connection successful - reached '${conn.adoProject}'.`);
+        vscode.window.showInformationMessage(`Connection successful.`);
       } else {
         vscode.window.showErrorMessage(`Connection failed: HTTP ${result.status} ${result.reason}. Check Org URL, Project, and PAT scopes.`);
       }
@@ -48,53 +51,60 @@ export function registerConnectionCommands(
   );
 
   async function editConnection(existing: Connection | undefined): Promise<void> {
-    const name = await vscode.window.showInputBox({
-      title: existing ? 'Edit connection - name' : 'New connection - name',
-      prompt: "Friendly label (e.g. 'Carlsberg HUB')",
-      value: existing?.name ?? '',
-      ignoreFocusOut: true,
-    });
-    if (!name) return;
-    const orgUrl = await vscode.window.showInputBox({
-      title: 'ADO Org URL', prompt: 'e.g. https://dev.azure.com/contoso',
-      value: existing?.adoOrgUrl ?? 'https://dev.azure.com/',
-      ignoreFocusOut: true,
-      validateInput: v => /^https?:\/\/.+/.test(v) ? null : 'Must be an https URL',
-    });
-    if (!orgUrl) return;
-    const project = await vscode.window.showInputBox({
-      title: 'ADO Project', prompt: 'Project name (no slashes)',
-      value: existing?.adoProject ?? '',
-      ignoreFocusOut: true,
-      validateInput: v => v.trim().length > 0 ? null : 'Project is required',
-    });
-    if (!project) return;
-
-    // Identity picker
-    const ids = identities.loadAll();
-    let identityId = existing?.identityId ?? '';
-    const items: vscode.QuickPickItem[] = ids.map(i => ({ label: i.displayName, description: i.email, detail: i.id }));
-    items.push({ label: '$(add) Create new identity...', description: '', detail: '__new__' });
-    const pick = await vscode.window.showQuickPick(items, { title: 'Identity', placeHolder: 'Select identity to use' });
-    if (!pick) return;
-    if (pick.detail === '__new__') {
+    const isEdit = !!existing;
+    if (identities.loadAll().length === 0) {
+      const choice = await vscode.window.showWarningMessage(
+        'You need to add an identity first.', { modal: true }, 'Add identity',
+      );
+      if (choice !== 'Add identity') return;
       await vscode.commands.executeCommand('d365fo.identities.add');
-      const fresh = identities.loadAll();
-      const newest = fresh[fresh.length - 1];
-      if (!newest) { vscode.window.showWarningMessage('No identity created.'); return; }
-      identityId = newest.id;
-    } else {
-      identityId = pick.detail!;
+      if (identities.loadAll().length === 0) return;
+    }
+
+    const idOptions = identities.loadAll().map(i => ({
+      value: i.id,
+      label: i.displayName,
+      description: i.email,
+    }));
+
+    const result = await showForm(
+      ctx,
+      isEdit ? `Edit connection - ${existing!.name}` : 'New connection',
+      [
+        { key: 'name', label: 'Connection name', type: 'text', required: true,
+          value: existing?.name, placeholder: 'e.g. Carlsberg HUB' },
+        { key: 'adoOrgUrl', label: 'ADO Organization URL', type: 'text', required: true,
+          value: existing?.adoOrgUrl ?? 'https://dev.azure.com/',
+          placeholder: 'https://dev.azure.com/<org>',
+          help: 'Just the org URL - no project segment.' },
+        { key: 'adoProject', label: 'ADO Project', type: 'text', required: true,
+          value: existing?.adoProject, placeholder: 'Project name' },
+        { key: 'identityId', label: 'Identity', type: 'select', required: true,
+          value: existing?.identityId ?? idOptions[0]?.value,
+          options: idOptions,
+          help: 'Identity used to authenticate (PAT is stored encrypted).' },
+        { key: 'workingFolder', label: 'Working folder (optional)', type: 'folder',
+          value: existing?.workingFolder, placeholder: 'e.g. D:\\CarlsbergRepos\\1760-Smartcore-HUB' },
+        { key: 'notes', label: 'Notes (optional)', type: 'textarea',
+          value: existing?.notes },
+      ],
+      isEdit ? 'Update' : 'Save connection',
+    );
+    if (!result) return;
+
+    if (!/^https?:\/\/.+/.test(result.adoOrgUrl)) {
+      vscode.window.showErrorMessage('ADO Org URL must start with https://');
+      return;
     }
 
     const conn: Connection = {
       id: existing?.id ?? connections.newId(),
-      name: name.trim(),
-      adoOrgUrl: orgUrl.trim().replace(/\/+$/, ''),
-      adoProject: project.trim().replace(/^\/+|\/+$/g, ''),
-      identityId,
-      workingFolder: existing?.workingFolder,
-      notes: existing?.notes,
+      name: result.name.trim(),
+      adoOrgUrl: result.adoOrgUrl.trim().replace(/\/+$/, ''),
+      adoProject: result.adoProject.trim().replace(/^\/+|\/+$/g, ''),
+      identityId: result.identityId,
+      workingFolder: result.workingFolder.trim() || undefined,
+      notes: result.notes.trim() || undefined,
       lastUsedUtc: new Date().toISOString(),
     };
     connections.upsert(conn);

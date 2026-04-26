@@ -3,7 +3,7 @@ import { ConnectionStore } from './services/connectionStore';
 import { IdentityStore } from './services/identityStore';
 import { ConnectionsTreeProvider } from './views/connectionsTreeProvider';
 import { IdentitiesTreeProvider } from './views/identitiesTreeProvider';
-import { openDashboard } from './views/dashboardWebview';
+import { openDashboard, refreshDashboard } from './views/dashboardWebview';
 import { registerConnectionCommands } from './commands/connectionCommands';
 import { registerIdentityCommands } from './commands/identityCommands';
 import { registerNuGetSyncCommand } from './commands/nugetSyncCommand';
@@ -31,6 +31,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('d365fo.openDashboard', () =>
       openDashboard(context, connectionStore, identityStore)),
+    vscode.commands.registerCommand('d365fo.dashboard.refresh', () => refreshDashboard()),
     vscode.commands.registerCommand('d365fo.refresh', () => {
       connectionsTree.refresh();
       identitiesTree.refresh();
@@ -47,15 +48,26 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(statusBarItem);
   updateStatusBar(connectionStore);
   statusBarItem.show();
+
+  // Auto-open dashboard per setting
+  const openMode = vscode.workspace.getConfiguration('d365fo').get<string>('openDashboardOnStartup', 'ifEmpty');
+  const shouldOpen =
+    openMode === 'always' ||
+    (openMode === 'ifEmpty' && connectionStore.loadAll().length === 0);
+  if (shouldOpen) {
+    setTimeout(() => {
+      vscode.commands.executeCommand('d365fo.openDashboard');
+    }, 800);
+  }
 }
 
 function updateStatusBar(store: ConnectionStore): void {
   const active = store.getActive();
   if (active) {
-    statusBarItem.text = `$(plug) D365FO: ${active.name}`;
+    statusBarItem.text = `$(plug) D365 F&O Dev Lead: ${active.name}`;
     statusBarItem.tooltip = `Active connection: ${active.name}\nProject: ${active.adoProject}\nClick to open dashboard`;
   } else {
-    statusBarItem.text = `$(plug) D365FO: no connection`;
+    statusBarItem.text = `$(plug) D365 F&O Dev Lead: no connection`;
     statusBarItem.tooltip = 'Click to open dashboard and add a connection';
   }
 }

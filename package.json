@@ -2,7 +2,7 @@
   "name": "d365fo-devlead",
   "displayName": "D365 F&O Dev Lead",
   "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
-  "version": "0.1.0",
+  "version": "0.1.15",
   "publisher": "vjanardhana12",
   "engines": {
     "vscode": "^1.92.0"
@@ -24,7 +24,7 @@
       "activitybar": [
         {
           "id": "d365fo",
-          "title": "D365 F&O",
+          "title": "D365 F&O Dev Lead",
           "icon": "media/activitybar.svg"
         }
       ]
@@ -32,19 +32,29 @@
     "views": {
       "d365fo": [
         {
-          "id": "d365fo.connections",
-          "name": "Connections",
-          "icon": "media/activitybar.svg",
-          "contextualTitle": "D365 F&O Connections"
-        },
-        {
           "id": "d365fo.identities",
           "name": "Identities",
           "icon": "media/activitybar.svg",
           "contextualTitle": "D365 F&O Identities"
+        },
+        {
+          "id": "d365fo.connections",
+          "name": "Connections",
+          "icon": "media/activitybar.svg",
+          "contextualTitle": "D365 F&O Connections"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "d365fo.identities",
+        "contents": "Identities are *who* you authenticate as (display name + email + ADO PAT).\n\n[+ Add identity](command:d365fo.identities.add)\n[Open dashboard](command:d365fo.openDashboard)\n\n[Learn more](https://github.com/vjanardhana12/d365fo-devlead#readme)"
+      },
+      {
+        "view": "d365fo.connections",
+        "contents": "Connections bind an identity to an ADO project (one connection per project).\n\n[+ Add connection](command:d365fo.connections.add)\n[Open dashboard](command:d365fo.openDashboard)\n\nAdd an identity first if you haven't yet."
+      }
+    ],
     "commands": [
       {
         "command": "d365fo.openDashboard",
@@ -100,29 +110,39 @@
         "command": "d365fo.nugetSync.run",
         "title": "D365FO: Run NuGet Sync",
         "icon": "$(sync)"
+      },
+      {
+        "command": "d365fo.nugetSync.showOutput",
+        "title": "D365FO: Show NuGet Sync Output",
+        "icon": "$(output)"
       }
     ],
     "menus": {
       "view/title": [
         {
+          "command": "d365fo.openDashboard",
+          "when": "view == d365fo.identities || view == d365fo.connections",
+          "group": "navigation@0"
+        },
+        {
           "command": "d365fo.connections.add",
           "when": "view == d365fo.connections",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "d365fo.refresh",
           "when": "view == d365fo.connections",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "d365fo.identities.add",
           "when": "view == d365fo.identities",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "d365fo.refresh",
           "when": "view == d365fo.identities",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -188,6 +208,17 @@
           "type": "string",
           "default": "",
           "description": "Optional override for the Sync-D365FONuGet.ps1 path. Leave blank to use the bundled / cached copy."
+        },
+        "d365fo.openDashboardOnStartup": {
+          "type": "string",
+          "enum": ["never", "ifEmpty", "always"],
+          "default": "ifEmpty",
+          "enumDescriptions": [
+            "Never auto-open the dashboard.",
+            "Only open when no connections are configured (default).",
+            "Open the dashboard every time VS Code starts."
+          ],
+          "description": "When to auto-open the D365 F&O Dashboard on VS Code startup."
         }
       }
     }
@@ -208,3 +239,4 @@
     "typescript": "^5.5.0"
   }
 }
+
