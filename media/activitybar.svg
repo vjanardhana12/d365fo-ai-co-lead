@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Stylized 'D' for D365 -->
+  <path d="M5 4h7a8 8 0 0 1 0 16H5z"/>
+  <!-- Lightning bolt = dev lead / power tools -->
+  <path d="M13 8l-3 5h3l-1 4 3-5h-3z" fill="currentColor" stroke="none"/>
+</svg>

@@ -1,0 +1,210 @@
+{
+  "name": "d365fo-devlead",
+  "displayName": "D365 F&O Dev Lead",
+  "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
+  "version": "0.1.0",
+  "publisher": "vjanardhana12",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": ["Other", "Chat", "AI"],
+  "keywords": ["d365", "dynamics 365", "finance and operations", "f&o", "x++", "azure devops", "nuget", "dev lead"],
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vjanardhana12/d365fo-devlead.git"
+  },
+  "license": "MIT",
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "d365fo",
+          "title": "D365 F&O",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "d365fo": [
+        {
+          "id": "d365fo.connections",
+          "name": "Connections",
+          "icon": "media/activitybar.svg",
+          "contextualTitle": "D365 F&O Connections"
+        },
+        {
+          "id": "d365fo.identities",
+          "name": "Identities",
+          "icon": "media/activitybar.svg",
+          "contextualTitle": "D365 F&O Identities"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "d365fo.openDashboard",
+        "title": "D365FO: Open Dashboard",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "d365fo.refresh",
+        "title": "D365FO: Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "d365fo.connections.add",
+        "title": "Add Connection",
+        "icon": "$(add)"
+      },
+      {
+        "command": "d365fo.connections.edit",
+        "title": "Edit Connection",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "d365fo.connections.delete",
+        "title": "Delete Connection",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "d365fo.connections.test",
+        "title": "Test Connection",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "d365fo.connections.setActive",
+        "title": "Set as Active",
+        "icon": "$(star)"
+      },
+      {
+        "command": "d365fo.identities.add",
+        "title": "Add Identity",
+        "icon": "$(add)"
+      },
+      {
+        "command": "d365fo.identities.edit",
+        "title": "Edit Identity",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "d365fo.identities.delete",
+        "title": "Delete Identity",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "d365fo.nugetSync.run",
+        "title": "D365FO: Run NuGet Sync",
+        "icon": "$(sync)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "d365fo.connections.add",
+          "when": "view == d365fo.connections",
+          "group": "navigation"
+        },
+        {
+          "command": "d365fo.refresh",
+          "when": "view == d365fo.connections",
+          "group": "navigation"
+        },
+        {
+          "command": "d365fo.identities.add",
+          "when": "view == d365fo.identities",
+          "group": "navigation"
+        },
+        {
+          "command": "d365fo.refresh",
+          "when": "view == d365fo.identities",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "d365fo.connections.setActive",
+          "when": "view == d365fo.connections && viewItem == connection",
+          "group": "1@1"
+        },
+        {
+          "command": "d365fo.connections.test",
+          "when": "view == d365fo.connections && viewItem == connection",
+          "group": "1@2"
+        },
+        {
+          "command": "d365fo.connections.edit",
+          "when": "view == d365fo.connections && viewItem == connection",
+          "group": "2@1"
+        },
+        {
+          "command": "d365fo.connections.delete",
+          "when": "view == d365fo.connections && viewItem == connection",
+          "group": "9@1"
+        },
+        {
+          "command": "d365fo.identities.edit",
+          "when": "view == d365fo.identities && viewItem == identity",
+          "group": "1@1"
+        },
+        {
+          "command": "d365fo.identities.delete",
+          "when": "view == d365fo.identities && viewItem == identity",
+          "group": "9@1"
+        }
+      ]
+    },
+    "chatParticipants": [
+      {
+        "id": "d365fo.devlead",
+        "name": "d365fo",
+        "fullName": "D365 F&O Dev Lead",
+        "description": "Run dev-lead actions on D365 F&O - connections, NuGet sync, PRs, pre-checks.",
+        "isSticky": true,
+        "commands": [
+          { "name": "dashboard",   "description": "Open the D365 F&O dashboard" },
+          { "name": "connections", "description": "List configured connections" },
+          { "name": "test",        "description": "Test the active connection" },
+          { "name": "sync",        "description": "Run NuGet sync for the active connection" },
+          { "name": "prs",         "description": "Show open pull requests (coming soon)" },
+          { "name": "estimate",    "description": "Estimate a work item (coming soon)" }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "D365 F&O Dev Lead",
+      "properties": {
+        "d365fo.storageMode": {
+          "type": "string",
+          "enum": ["workspace", "global"],
+          "default": "global",
+          "description": "Where to store connections and identities. 'global' shares across all workspaces; 'workspace' keeps them per-folder."
+        },
+        "d365fo.nugetSyncScript": {
+          "type": "string",
+          "default": "",
+          "description": "Optional override for the Sync-D365FONuGet.ps1 path. Leave blank to use the bundled / cached copy."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node esbuild.js",
+    "package": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "lint": "tsc --noEmit",
+    "vscode:package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.92.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.0"
+  }
+}
