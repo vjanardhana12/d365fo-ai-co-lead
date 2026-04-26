@@ -2,8 +2,8 @@
   "name": "d365fo-devlead",
   "displayName": "D365 F&O Dev Lead",
   "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
-  "version": "0.1.15",
-  "publisher": "vjanardhana12",
+  "version": "0.2.0",
+  "publisher": "vinodkumarkj",
   "engines": {
     "vscode": "^1.92.0"
   },
@@ -208,6 +208,16 @@
           "type": "string",
           "default": "",
           "description": "Optional override for the Sync-D365FONuGet.ps1 path. Leave blank to use the bundled / cached copy."
+        },
+        "d365fo.nugetSyncScriptChannel": {
+          "type": "string",
+          "enum": ["latest-release", "main"],
+          "default": "latest-release",
+          "enumDescriptions": [
+            "Pull the script from the latest GitHub Release of d365fo-nuget-sync (recommended).",
+            "Pull the script from the main branch (bleeding edge - dev only)."
+          ],
+          "description": "Channel to fetch the NuGet sync PowerShell script from. Ignored if 'd365fo.nugetSyncScript' is set."
         },
         "d365fo.openDashboardOnStartup": {
           "type": "string",
