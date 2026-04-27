@@ -2,13 +2,26 @@
   "name": "d365fo-devlead",
   "displayName": "D365 F&O Dev Lead",
   "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "publisher": "vinodkumarkj",
   "engines": {
     "vscode": "^1.92.0"
   },
-  "categories": ["Other", "Chat", "AI"],
-  "keywords": ["d365", "dynamics 365", "finance and operations", "f&o", "x++", "azure devops", "nuget", "dev lead"],
+  "categories": [
+    "Other",
+    "Chat",
+    "AI"
+  ],
+  "keywords": [
+    "d365",
+    "dynamics 365",
+    "finance and operations",
+    "f&o",
+    "x++",
+    "azure devops",
+    "nuget",
+    "dev lead"
+  ],
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
@@ -186,12 +199,30 @@
         "description": "Run dev-lead actions on D365 F&O - connections, NuGet sync, PRs, pre-checks.",
         "isSticky": true,
         "commands": [
-          { "name": "dashboard",   "description": "Open the D365 F&O dashboard" },
-          { "name": "connections", "description": "List configured connections" },
-          { "name": "test",        "description": "Test the active connection" },
-          { "name": "sync",        "description": "Run NuGet sync for the active connection" },
-          { "name": "prs",         "description": "Show open pull requests (coming soon)" },
-          { "name": "estimate",    "description": "Estimate a work item (coming soon)" }
+          {
+            "name": "dashboard",
+            "description": "Open the D365 F&O dashboard"
+          },
+          {
+            "name": "connections",
+            "description": "List configured connections"
+          },
+          {
+            "name": "test",
+            "description": "Test the active connection"
+          },
+          {
+            "name": "sync",
+            "description": "Run NuGet sync for the active connection"
+          },
+          {
+            "name": "prs",
+            "description": "Show open pull requests (coming soon)"
+          },
+          {
+            "name": "estimate",
+            "description": "Estimate a work item (coming soon)"
+          }
         ]
       }
     ],
@@ -200,7 +231,10 @@
       "properties": {
         "d365fo.storageMode": {
           "type": "string",
-          "enum": ["workspace", "global"],
+          "enum": [
+            "workspace",
+            "global"
+          ],
           "default": "global",
           "description": "Where to store connections and identities. 'global' shares across all workspaces; 'workspace' keeps them per-folder."
         },
@@ -211,7 +245,10 @@
         },
         "d365fo.nugetSyncScriptChannel": {
           "type": "string",
-          "enum": ["latest-release", "main"],
+          "enum": [
+            "latest-release",
+            "main"
+          ],
           "default": "latest-release",
           "enumDescriptions": [
             "Pull the script from the latest GitHub Release of d365fo-nuget-sync (recommended).",
@@ -221,7 +258,11 @@
         },
         "d365fo.openDashboardOnStartup": {
           "type": "string",
-          "enum": ["never", "ifEmpty", "always"],
+          "enum": [
+            "never",
+            "ifEmpty",
+            "always"
+          ],
           "default": "ifEmpty",
           "enumDescriptions": [
             "Never auto-open the dashboard.",
@@ -249,4 +290,3 @@
     "typescript": "^5.5.0"
   }
 }
-

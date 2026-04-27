@@ -18,7 +18,7 @@ First Marketplace release. The extension is feature-complete for the Identities 
 - Live status bar updates during NuGet Sync (`NuGet: PackageName`)
 - Green/red status bar summary for 10 seconds after NuGet Sync completes
 - Dashboard badge inside NuGet Sync tile shows last-run summary
-- Output Channel `D365FO NuGet Sync` for streaming PowerShell output
+- Output Channel `D365 F&O NuGet Sync` for streaming PowerShell output
 - "Show last sync output" tile to reopen the channel anytime
 - Configurable script channel (`latest-release` vs `main`) for the NuGet sync PS1
 - Auto-open dashboard on startup setting (`never`, `ifEmpty`, `always`)

@@ -13,7 +13,7 @@ export interface LastNuGetResult { ok: boolean; pushed: number; skipped: number;
 let channel: vscode.OutputChannel | undefined;
 
 function getChannel(): vscode.OutputChannel {
-  if (!channel) channel = vscode.window.createOutputChannel('D365FO NuGet Sync');
+  if (!channel) channel = vscode.window.createOutputChannel('D365 F&O NuGet Sync');
   return channel;
 }
 
@@ -26,7 +26,7 @@ export function registerNuGetSyncCommand(
     vscode.commands.registerCommand('d365fo.nugetSync.showOutput', () => {
       getChannel().show(true);
     }),
-    vscode.commands.registerCommand('d365fo.nugetSync.run', async () => {
+    vscode.commands.registerCommand('d365fo.nugetSync.run', async (opts?: { useLast?: boolean }) => {
       const conn = connections.getActive();
       if (!conn) { vscode.window.showWarningMessage('No active connection. Add one first.'); return; }
       const identity = identities.get(conn.identityId);
@@ -36,10 +36,15 @@ export function registerNuGetSyncCommand(
 
       const last = ctx.globalState.get<LastNuGet>(LAST_NUGET_KEY) ?? { feedUrl: '', feedName: '', packageFolder: '', force: 'No' };
 
-      const result = await showForm(
-        ctx,
-        `NuGet Sync - ${conn.name}`,
-        [
+      // "Run sync" path - skip form if last values are complete
+      let result: { feedUrl: string; feedName: string; packageFolder: string; force: string } | undefined;
+      if (opts?.useLast && last.feedUrl && last.packageFolder) {
+        result = { ...last };
+      } else {
+        result = await showForm(
+          ctx,
+          `D365 F&O NuGet Sync - ${conn.name}`,
+          [
           { key: 'feedUrl', label: 'ADO Artifacts feed URL', type: 'text', required: true,
             value: last.feedUrl,
             placeholder: 'https://pkgs.dev.azure.com/<org>/_packaging/<feed>/nuget/v3/index.json',
@@ -58,9 +63,10 @@ export function registerNuGetSyncCommand(
               { value: 'No', label: 'No', description: 'Skip existing versions (recommended)' },
               { value: 'Yes', label: 'Yes', description: 'Overwrite existing versions' },
             ]},
-        ],
-        'Run sync',
-      );
+          ],
+          'Run sync',
+        );
+      }
       if (!result) return;
 
       // Auto-derive feed name from URL if user left it blank but URL has it
@@ -90,8 +96,8 @@ export function registerNuGetSyncCommand(
 
       // Status bar item — live during run, then stays visible 10s with result colour
       const sb = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 99);
-      sb.text = '$(sync~spin) NuGet Sync: starting...';
-      sb.tooltip = 'D365FO NuGet Sync running - click to view output';
+      sb.text = '$(sync~spin) D365 F&O NuGet Sync: starting...';
+      sb.tooltip = 'D365 F&O NuGet Sync running - click to view output';
       sb.command = 'd365fo.nugetSync.showOutput';
       sb.show();
 
@@ -136,8 +142,8 @@ export function registerNuGetSyncCommand(
 
       // Status bar final state — sticky for 10s with colour
       sb.text = ok
-        ? `$(check) NuGet Sync: ${tally.pushed} pushed, ${tally.skipped} skipped (${fmtDur(durationSec)})`
-        : `$(error) NuGet Sync failed: ${tally.failed} failed`;
+        ? `$(check) D365 F&O NuGet Sync: ${tally.pushed} pushed, ${tally.skipped} skipped (${fmtDur(durationSec)})`
+        : `$(error) D365 F&O NuGet Sync failed: ${tally.failed} failed`;
       sb.backgroundColor = new vscode.ThemeColor(ok ? 'statusBarItem.warningBackground' : 'statusBarItem.errorBackground');
       // Use prominent background only on failure; on success use a coloured foreground
       if (ok) {
@@ -151,8 +157,8 @@ export function registerNuGetSyncCommand(
       // Refresh dashboard if open
       vscode.commands.executeCommand('d365fo.dashboard.refresh').then(undefined, () => {});
 
-      if (ok) vscode.window.showInformationMessage(`NuGet sync completed - ${tally.pushed} pushed, ${tally.skipped} skipped.`);
-      else vscode.window.showErrorMessage(`NuGet sync failed (exit ${exit}). See output channel.`);
+      if (ok) vscode.window.showInformationMessage(`D365 F&O NuGet Sync completed - ${tally.pushed} pushed, ${tally.skipped} skipped.`);
+      else vscode.window.showErrorMessage(`D365 F&O NuGet Sync failed (exit ${exit}). See output channel.`);
     }),
   );
 }

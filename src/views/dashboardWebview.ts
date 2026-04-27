@@ -34,6 +34,10 @@ export function openDashboard(
         await vscode.commands.executeCommand(msg.command, ...(msg.args ?? []));
         render();
         break;
+      case 'cmdArgs':
+        await vscode.commands.executeCommand(msg.command, ...(msg.args ?? []));
+        render();
+        break;
       case 'cmdWithItem':
         await vscode.commands.executeCommand(msg.command, { [msg.itemKey]: msg.payload });
         render();
@@ -222,6 +226,15 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     .badge.ok { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #4caf50) 12%, transparent); color: var(--vscode-testing-iconPassed, #4caf50); }
     .badge.fail { background: color-mix(in srgb, var(--vscode-errorForeground) 12%, transparent); color: var(--vscode-errorForeground); }
     .badge .bdot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .tile-snap { cursor: default; }
+    .snap { margin-top: 10px; padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; }
+    .snap.ok { background: color-mix(in srgb, var(--vscode-testing-iconPassed, #4caf50) 8%, transparent); border-color: var(--vscode-testing-iconPassed, #4caf50); }
+    .snap.fail { background: color-mix(in srgb, var(--vscode-errorForeground) 8%, transparent); border-color: var(--vscode-errorForeground); }
+    .snap-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+    .snap-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--vscode-descriptionForeground); }
+    .snap-when { font-size: 11px; color: var(--vscode-descriptionForeground); }
+    .snap-stats b { color: var(--vscode-foreground); }
+    .tile-actions { margin-top: 10px; display: flex; gap: 6px; }
   </style></head><body>
     <h1>D365 F&amp;O Dev Lead</h1>
     <div class="sub">Dashboard - manage connections, identities, and run dev-lead tools without leaving VS Code.</div>
@@ -230,14 +243,10 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
 
     <h2>Quick actions</h2>
     <div class="grid">
-      <div class="tile" data-cmd="d365fo.nugetSync.run">
-        <h3>NuGet Sync</h3>
-        <p>Push D365 F&amp;O packages to ADO Artifacts</p>
-        ${renderNuGetBadge(lastNuGet)}
-      </div>
+      ${renderNuGetTile(lastNuGet)}
       <div class="tile" data-cmd="d365fo.nugetSync.showOutput">
         <h3>Show last sync output</h3>
-        <p>Open the NuGet Sync log channel</p>
+        <p>Open the D365 F&amp;O NuGet Sync log channel</p>
       </div>
       <div class="tile disabled">
         <h3>Pull Requests</h3>
@@ -285,6 +294,13 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
             vscode.postMessage({ type: 'cmd', command: el.dataset.cmd });
           });
         });
+        document.querySelectorAll('[data-cmd-args]').forEach(el => {
+          el.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation();
+            const args = JSON.parse(el.dataset.args || '[]');
+            vscode.postMessage({ type: 'cmdArgs', command: el.dataset.cmdArgs, args });
+          });
+        });
         document.querySelectorAll('[data-cmd-item]').forEach(el => {
           el.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
@@ -321,18 +337,39 @@ function escAttr(s: string): string {
 }
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString();
+  // e.g. "Apr 27, 8:51 PM"
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${date}, ${time}`;
 }
-function renderNuGetBadge(r: LastNuGetResult | undefined): string {
-  if (!r) return '';
-  const cls = r.ok ? 'badge ok' : 'badge fail';
-  const icon = r.ok ? 'check' : 'error';
-  const ago = relTime(r.whenIso);
-  const summary = r.ok
-    ? `${r.pushed} pushed${r.skipped ? `, ${r.skipped} skipped` : ''}`
-    : `${r.failed} failed`;
-  return `<div class="${cls}"><span class="bdot"></span>$(${icon}) Last: ${summary} - ${ago}</div>`
-    .replace(/\$\((\w+)\)/g, '');
+function renderNuGetTile(r: LastNuGetResult | undefined): string {
+  // No previous run yet -> simple click-to-run tile
+  if (!r) {
+    return `<div class="tile" data-cmd="d365fo.nugetSync.run">
+      <h3>D365 F&amp;O NuGet Sync</h3>
+      <p>Push D365 F&amp;O packages to ADO Artifacts</p>
+    </div>`;
+  }
+
+  // Snapshot of last run + Run sync button (re-uses last form values)
+  const cls = r.ok ? 'snap ok' : 'snap fail';
+  const stamp = `${formatTime(r.whenIso)} - ${relTime(r.whenIso)}`;
+  const stats = r.ok
+    ? `<b>${r.pushed}</b> pushed${r.skipped ? `, <b>${r.skipped}</b> skipped` : ''}${r.failed ? `, <b>${r.failed}</b> failed` : ''}`
+    : `<b>${r.failed}</b> failed${r.pushed ? `, <b>${r.pushed}</b> pushed` : ''}${r.skipped ? `, <b>${r.skipped}</b> skipped` : ''}`;
+  const dur = `${Math.floor(r.durationSec / 60)}m ${r.durationSec % 60}s`;
+  return `<div class="tile tile-snap">
+    <h3>D365 F&amp;O NuGet Sync</h3>
+    <p>Push D365 F&amp;O packages to ADO Artifacts</p>
+    <div class="${cls}">
+      <div class="snap-row"><span class="snap-label">Last run</span><span class="snap-when">${esc(stamp)}</span></div>
+      <div class="snap-stats">${stats} <span class="muted">- ${dur}</span></div>
+    </div>
+    <div class="tile-actions">
+      <button class="btn-primary" data-cmd-args="d365fo.nugetSync.run" data-args='${escAttr(JSON.stringify([{ useLast: true }]))}'>Run sync</button>
+      <button class="btn-tiny" data-cmd="d365fo.nugetSync.run">Edit + run...</button>
+    </div>
+  </div>`;
 }
 
 function relTime(iso: string): string {

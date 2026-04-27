@@ -2,8 +2,8 @@
 
 > Click-driven dashboard, sidebar, and Copilot chat agent for **Dynamics 365 Finance & Operations dev leads**. Manage connections, identities, and run common dev-lead tools — without leaving VS Code.
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/vinodkumarkj.d365fo-devlead?style=flat&color=007acc)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj.d365fo-devlead)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/vinodkumarkj.d365fo-devlead?style=flat&color=007acc)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj.d365fo-devlead)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/vinodkumarkj12.d365fo-devlead?style=flat&color=007acc)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-devlead)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/vinodkumarkj12.d365fo-devlead?style=flat&color=007acc)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-devlead)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.txt)
 
 ## Features
