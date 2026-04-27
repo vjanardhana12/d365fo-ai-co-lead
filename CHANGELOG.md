@@ -2,6 +2,13 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.7 — 2026-04-27 — Simpler identity form
+
+### Changed
+- Removed the `Identity kind` dropdown from the Add/Edit identity form — every identity is treated as an ADO PAT (the only kind this extension uses today)
+- Display name help text updated to suggest customer-scoped names like `Vinod (MCAPS)`, `Vinod (Carlsberg)`
+- Dashboard identities table no longer shows the Kind column (always Pat)
+
 ## 0.2.6 — 2026-04-27 — PAT scope guidance + ADO PAT shortcut
 
 ### Added

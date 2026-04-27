@@ -26,7 +26,7 @@ export class IdentityItem extends vscode.TreeItem {
   constructor(public readonly identity: Identity) {
     super(identity.displayName, vscode.TreeItemCollapsibleState.None);
     this.description = identity.email;
-    this.tooltip = `${identity.displayName} <${identity.email}>\nKind: ${identity.kind}${identity.note ? `\n${identity.note}` : ''}`;
+    this.tooltip = `${identity.displayName} <${identity.email}>${identity.note ? `\n${identity.note}` : ''}`;
     this.contextValue = 'identity';
     this.iconPath = new vscode.ThemeIcon('account');
   }

@@ -162,13 +162,12 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
       }).join('\n');
 
   const identRows = ids.length === 0
-    ? `<tr><td colspan="4" class="empty">No identities yet. <a data-cmd="d365fo.identities.add">+ Add one</a></td></tr>`
+    ? `<tr><td colspan="3" class="empty">No identities yet. <a data-cmd="d365fo.identities.add">+ Add one</a></td></tr>`
     : ids.map(i => {
         const payload = escAttr(JSON.stringify(i));
         return `<tr>
           <td><b>${esc(i.displayName)}</b></td>
           <td class="muted">${esc(i.email)}</td>
-          <td>${esc(i.kind)}</td>
           <td class="actions-cell">
             <button class="btn-tiny" data-cmd-item="d365fo.identities.edit" data-item-key="identity" data-payload='${payload}'>Edit</button>
             <button class="btn-tiny btn-danger" data-cmd-item="d365fo.identities.delete" data-item-key="identity" data-payload='${payload}'>Delete</button>
@@ -271,7 +270,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
       <button class="add-btn" data-cmd="d365fo.identities.add">+ New identity</button>
     </div>
     <table>
-      <thead><tr><th>Display name</th><th>Email</th><th>Kind</th><th></th></tr></thead>
+      <thead><tr><th>Display name</th><th>Email</th><th></th></tr></thead>
       <tbody>${identRows}</tbody>
     </table>
 
