@@ -2,7 +2,7 @@
   "name": "d365fo-devlead",
   "displayName": "D365 F&O Dev Lead",
   "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
-  "version": "0.2.8",
+  "version": "0.2.9",
   "publisher": "vinodkumarkj12",
   "engines": {
     "vscode": "^1.92.0"

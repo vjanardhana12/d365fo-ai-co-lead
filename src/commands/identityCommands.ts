@@ -50,8 +50,8 @@ export function registerIdentityCommands(
       isEdit ? `Edit identity - ${existing!.displayName}` : 'New identity',
       [
         { key: 'displayName', label: 'Display name', type: 'text', required: true,
-          value: existing?.displayName, placeholder: 'e.g. ADO Work, ADO Customer A',
-          help: 'A friendly name to identify this credential. Use one identity per ADO org / customer.' },
+          value: existing?.displayName, placeholder: 'e.g. Yourname - Work, Yourname - Customer A',
+          help: 'A friendly label combining your name and the org/customer this credential is for. Use one identity per ADO org.' },
         { key: 'email', label: 'Email', type: 'email', required: true,
           value: existing?.email, placeholder: 'name@company.com',
           help: 'Used as the username for ADO Basic auth.' },
