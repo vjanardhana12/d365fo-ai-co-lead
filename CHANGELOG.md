@@ -2,6 +2,11 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.4 — 2026-04-27 — Dashboard refresh fix
+
+### Fixed
+- Dashboard webview now refreshes immediately when identities or connections are added, edited, deleted, or marked active from the activity bar tree views (previously stayed stale until manual refresh)
+
 ## 0.2.3 — 2026-04-27 — UI naming cleanup
 
 ### Changed

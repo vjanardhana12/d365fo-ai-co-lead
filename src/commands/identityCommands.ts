@@ -20,6 +20,7 @@ export function registerIdentityCommands(
       if (ok === 'Delete') {
         await store.delete(item.identity.id);
         tree.refresh();
+        vscode.commands.executeCommand('d365fo.dashboard.refresh');
       }
     }),
   );
@@ -81,6 +82,7 @@ export function registerIdentityCommands(
     };
     await store.upsert(id, result.pat.length > 0 ? result.pat : undefined);
     tree.refresh();
+    vscode.commands.executeCommand('d365fo.dashboard.refresh');
     vscode.window.showInformationMessage(`Saved identity '${id.displayName}'.`);
   }
 }

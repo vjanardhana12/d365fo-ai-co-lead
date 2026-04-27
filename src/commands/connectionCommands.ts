@@ -23,12 +23,14 @@ export function registerConnectionCommands(
         connections.delete(item.connection.id);
         tree.refresh();
         refreshStatus();
+        vscode.commands.executeCommand('d365fo.dashboard.refresh');
       }
     }),
     vscode.commands.registerCommand('d365fo.connections.setActive', (item: ConnectionItem) => {
       connections.setActive(item.connection.id);
       tree.refresh();
       refreshStatus();
+      vscode.commands.executeCommand('d365fo.dashboard.refresh');
       vscode.window.setStatusBarMessage(`Active: ${item.connection.name}`, 3000);
     }),
     vscode.commands.registerCommand('d365fo.connections.test', async (item?: ConnectionItem) => {
@@ -110,6 +112,7 @@ export function registerConnectionCommands(
     connections.upsert(conn);
     tree.refresh();
     refreshStatus();
+    vscode.commands.executeCommand('d365fo.dashboard.refresh');
     vscode.window.showInformationMessage(`Saved connection '${conn.name}'.`);
   }
 }

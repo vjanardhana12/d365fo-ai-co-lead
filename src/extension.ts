@@ -36,6 +36,7 @@ export function activate(context: vscode.ExtensionContext): void {
       connectionsTree.refresh();
       identitiesTree.refresh();
       updateStatusBar(connectionStore);
+      refreshDashboard();
     }),
   );
 
