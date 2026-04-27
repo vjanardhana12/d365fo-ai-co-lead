@@ -2,6 +2,12 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.6 — 2026-04-27 — PAT scope guidance + ADO PAT shortcut
+
+### Added
+- Command `D365FO: Open ADO PAT Page` — prompts for ADO org name or URL, opens the PAT generator page in your browser
+- Expanded PAT field help with role-based scope recommendations (Functional, Tester, Developer, Dev Lead) and a clear note that PATs cannot escalate ADO permissions
+
 ## 0.2.5 — 2026-04-27 — Publisher fix
 
 ### Changed
