@@ -2,6 +2,11 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.8 — 2026-04-27 — Generic placeholders
+
+### Changed
+- Form placeholders now use generic examples (`Contoso`, `Customer A`, `D:\Repos\YourProject`) instead of real customer names
+
 ## 0.2.7 — 2026-04-27 — Simpler identity form
 
 ### Changed

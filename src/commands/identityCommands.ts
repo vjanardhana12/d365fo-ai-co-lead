@@ -27,7 +27,7 @@ export function registerIdentityCommands(
       const org = await vscode.window.showInputBox({
         title: 'Open ADO PAT page',
         prompt: 'ADO organization name or full URL',
-        placeHolder: 'e.g. carlsberggroup  or  https://dev.azure.com/carlsberggroup',
+        placeHolder: 'e.g. contoso  or  https://dev.azure.com/contoso',
         ignoreFocusOut: true,
         validateInput: v => v.trim().length === 0 ? 'Required' : null,
       });
@@ -50,7 +50,7 @@ export function registerIdentityCommands(
       isEdit ? `Edit identity - ${existing!.displayName}` : 'New identity',
       [
         { key: 'displayName', label: 'Display name', type: 'text', required: true,
-          value: existing?.displayName, placeholder: 'e.g. Vinod (MCAPS), Vinod (Carlsberg)',
+          value: existing?.displayName, placeholder: 'e.g. ADO Work, ADO Customer A',
           help: 'A friendly name to identify this credential. Use one identity per ADO org / customer.' },
         { key: 'email', label: 'Email', type: 'email', required: true,
           value: existing?.email, placeholder: 'name@company.com',

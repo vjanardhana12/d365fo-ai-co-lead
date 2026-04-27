@@ -74,7 +74,7 @@ export function registerConnectionCommands(
       isEdit ? `Edit connection - ${existing!.name}` : 'New connection',
       [
         { key: 'name', label: 'Connection name', type: 'text', required: true,
-          value: existing?.name, placeholder: 'e.g. Carlsberg HUB' },
+          value: existing?.name, placeholder: 'e.g. Contoso ERP, Customer A HUB' },
         { key: 'adoOrgUrl', label: 'ADO Organization URL', type: 'text', required: true,
           value: existing?.adoOrgUrl ?? 'https://dev.azure.com/',
           placeholder: 'https://dev.azure.com/<org>',
@@ -86,7 +86,7 @@ export function registerConnectionCommands(
           options: idOptions,
           help: 'Identity used to authenticate (PAT is stored encrypted).' },
         { key: 'workingFolder', label: 'Working folder (optional)', type: 'folder',
-          value: existing?.workingFolder, placeholder: 'e.g. D:\\CarlsbergRepos\\1760-Smartcore-HUB' },
+          value: existing?.workingFolder, placeholder: 'e.g. D:\\Repos\\YourProject' },
         { key: 'notes', label: 'Notes (optional)', type: 'textarea',
           value: existing?.notes },
       ],
