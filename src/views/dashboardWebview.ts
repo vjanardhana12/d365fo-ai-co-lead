@@ -19,7 +19,7 @@ export function openDashboard(
 
   panel = vscode.window.createWebviewPanel(
     'd365fo.dashboard',
-    'D365 F&O Dashboard',
+    'Dev Lead Dashboard',
     vscode.ViewColumn.Active,
     { enableScripts: true, retainContextWhenHidden: true },
   );
@@ -236,8 +236,8 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     .snap-stats b { color: var(--vscode-foreground); }
     .tile-actions { margin-top: 10px; display: flex; gap: 6px; }
   </style></head><body>
-    <h1>D365 F&amp;O Dev Lead</h1>
-    <div class="sub">Dashboard - manage connections, identities, and run dev-lead tools without leaving VS Code.</div>
+    <h1>Dev Lead</h1>
+    <div class="sub">D365 F&amp;O dashboard - manage connections, identities, and run dev-lead tools without leaving VS Code.</div>
 
     ${topBlock}
 
@@ -246,7 +246,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
       ${renderNuGetTile(lastNuGet)}
       <div class="tile" data-cmd="d365fo.nugetSync.showOutput">
         <h3>Show last sync output</h3>
-        <p>Open the D365 F&amp;O NuGet Sync log channel</p>
+        <p>Open the NuGet Sync log channel</p>
       </div>
       <div class="tile disabled">
         <h3>Pull Requests</h3>
@@ -346,7 +346,7 @@ function renderNuGetTile(r: LastNuGetResult | undefined): string {
   // No previous run yet -> simple click-to-run tile
   if (!r) {
     return `<div class="tile" data-cmd="d365fo.nugetSync.run">
-      <h3>D365 F&amp;O NuGet Sync</h3>
+      <h3>NuGet Sync</h3>
       <p>Push D365 F&amp;O packages to ADO Artifacts</p>
     </div>`;
   }
@@ -359,7 +359,7 @@ function renderNuGetTile(r: LastNuGetResult | undefined): string {
     : `<b>${r.failed}</b> failed${r.pushed ? `, <b>${r.pushed}</b> pushed` : ''}${r.skipped ? `, <b>${r.skipped}</b> skipped` : ''}`;
   const dur = `${Math.floor(r.durationSec / 60)}m ${r.durationSec % 60}s`;
   return `<div class="tile tile-snap">
-    <h3>D365 F&amp;O NuGet Sync</h3>
+    <h3>NuGet Sync</h3>
     <p>Push D365 F&amp;O packages to ADO Artifacts</p>
     <div class="${cls}">
       <div class="snap-row"><span class="snap-label">Last run</span><span class="snap-when">${esc(stamp)}</span></div>

@@ -2,6 +2,19 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.3 — 2026-04-27 — UI naming cleanup
+
+### Changed
+- Dashboard tab title: `D365 F&O Dashboard` → `Dev Lead Dashboard`
+- Dashboard heading: `D365 F&O Dev Lead` → `Dev Lead` (subtitle still mentions D365 F&O)
+- NuGet tile title: `D365 F&O NuGet Sync` → `NuGet Sync`
+- Status bar text: `D365 F&O NuGet Sync: starting...` → `NuGet Sync: starting...`
+- Form title: `D365 F&O NuGet Sync - <conn>` → `NuGet Sync - <conn>`
+- Notifications now use `D365 F&O: <message>` style (cleaner colon separator)
+
+### Kept (suite identity on global surfaces)
+- Marketplace name, command palette commands, output channel, activity bar title
+
 ## 0.2.0 — 2026-04-26 — First public release
 
 First Marketplace release. The extension is feature-complete for the Identities + Connections + NuGet Sync workflow.
