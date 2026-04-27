@@ -1,4 +1,6 @@
-# D365 F&O Dev Lead
+?# D365 F&O Dev Lead
+
+_Built by [@vjanardhana12](https://github.com/vjanardhana12) on GitHub, published as `vinodkumarkj12` on the VS Code Marketplace._
 
 > Click-driven dashboard, sidebar, and Copilot chat agent for **Dynamics 365 Finance & Operations dev leads**. Manage connections, identities, and run common dev-lead tools — without leaving VS Code.
 
