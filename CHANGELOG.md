@@ -2,6 +2,11 @@
 
 All notable changes to the **D365 F&O Dev Lead** extension.
 
+## 0.2.5 — 2026-04-27 — Publisher fix
+
+### Changed
+- Publisher set to `vinodkumarkj12` to match the registered Marketplace publisher (was incorrectly `vinodkumarkj` in earlier dev builds — this is now locked for all future releases)
+
 ## 0.2.4 — 2026-04-27 — Dashboard refresh fix
 
 ### Fixed
