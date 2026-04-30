@@ -32,7 +32,7 @@ This is the differentiator vs the skill-files approach. It's also the legitimate
 | Short / status bar | `D365 F&O AI Co-Lead` / `$(rocket) D365 F&O Co-Lead: <project>` |
 | Extension `name` | `d365fo-ai-co-lead` |
 | Extension full ID | `vinodkumarkj12.d365fo-ai-co-lead` |
-| Publisher | `vinodkumarkj12` (personal Marketplace) |
+| Publisher | `vinodkumarkj12` (kept for `vsce package` requirement; no Marketplace listing) |
 | GitHub repo (current local) | `d:/GitHub/GitHub-Personal/d365fo-devlead` *(folder still old name)* |
 | GitHub repo (target) | `vjanardhana12/d365fo-ai-co-lead` |
 | Tagline | *Your AI partner across the F&O delivery lifecycle — Architect, FC, Dev Lead, Developer, Tester, PM.* |
@@ -236,7 +236,7 @@ Adding a new customer = new key under `kitData` + a new "kit edit" command. Core
 | Component | Repo | Account | Why |
 |---|---|---|---|
 | **Main extension** (`d365fo-ai-co-lead`) | `vjanardhana12/d365fo-ai-co-lead` | personal GitHub | Public, OSS |
-| Marketplace publish | `vinodkumarkj12` publisher | personal Marketplace | Public install |
+| Distribution | GitHub Releases | personal GitHub | Public install via `code --install-extension` |
 | **NuGet Sync script** (already standalone) | `vjanardhana12/d365fo-nuget-sync` | personal GitHub | Anyone can use without extension |
 | **Future generic tiles** (when extracted) | own repos under `vjanardhana12` | personal GitHub | Composable plugins |
 | **MS-internal-only** (eval datasets, internal LLM endpoints) | `mcaps-microsoft/<name>` | MS GitHub | IP / security |
@@ -313,12 +313,9 @@ code --install-extension d365fo-ai-co-lead-1.0.0.vsix --force
    git push origin main --tags
    ```
 5. **GitHub Release:** attach `d365fo-ai-co-lead-1.0.0.vsix`, paste CHANGELOG entry as release notes.
-6. **Marketplace publish:**
-   ```powershell
-   npx vsce publish --pat <marketplace-PAT>
-   ```
-   (or upload VSIX manually at https://marketplace.visualstudio.com/manage/publishers/vinodkumarkj12)
-7. **Update [vjanardhana12.github.io](https://vjanardhana12.github.io)** with a "D365 F&O AI Co-Lead — coming soon to Marketplace" / "v1.0 shipped" banner.
+6. **Update [vjanardhana12.github.io](https://vjanardhana12.github.io)** project page if version metadata changed.
+
+> Marketplace publish is intentionally **not** part of the release flow. Distribution is via GitHub Releases only (public, no PAT, no publisher management). The `publisher` field in `package.json` is retained because `vsce package` requires it, but no Marketplace listing is maintained.
 
 ## 12. Resuming a session
 

@@ -2,11 +2,9 @@
 
 > Your AI partner across the **F&O delivery lifecycle** — Architect, FC, Dev Lead, Developer, Tester, PM. One VS Code extension. Six role-aware AI partners. An in-product Agent Factory. Powered by `D365FODevMCP`, `DevMachine`, and the Azure DevOps MCP.
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/vinodkumarkj12.d365fo-ai-co-lead?style=flat&color=0e7490)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/vinodkumarkj12.d365fo-ai-co-lead?style=flat&color=0e7490)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-_Built by [@vjanardhana12](https://github.com/vjanardhana12) on GitHub, published as `vinodkumarkj12` on the VS Code Marketplace._
+_Built by [@vjanardhana12](https://github.com/vjanardhana12). Distributed via [GitHub Releases](https://github.com/vjanardhana12/d365fo-ai-co-lead/releases/latest)._
 
 ---
 
@@ -41,7 +39,7 @@ Everything is **F&O-only** in v1.0 — no CE / Power Platform mixing, by design.
 
 ## Quick start
 
-1. **Install** from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead) (or sideload the `.vsix`).
+1. **Install** the latest VSIX: download from [GitHub Releases](https://github.com/vjanardhana12/d365fo-ai-co-lead/releases/latest) -> `code --install-extension d365fo-ai-co-lead-1.0.0.vsix`.
 2. Click the **D365 F&O** activity bar icon → **Open Dashboard**.
 3. Add an **Identity** (your ADO email + PAT) → add a **Project Connection** OR run **Project Initiation Kit** (import from your DevWorkspace folder).
 4. Set your role(s): Settings → `d365fo.myRoles`.
@@ -262,11 +260,9 @@ This is a personal project published independently. Not an official Microsoft pr
 
 > Your AI partner across the **F&O delivery lifecycle** &mdash; Architect, FC, Dev Lead, Developer, Tester, PM. One VS Code extension. Six role-aware AI partners. An in-product Agent Factory. Powered by `D365FODevMCP`, `DevMachine`, and the Azure DevOps MCP.
 
-[![Version](https://img.shields.io/visual-studio-marketplace/v/vinodkumarkj12.d365fo-ai-co-lead?style=flat&color=0e7490)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead)
-[![Installs](https://img.shields.io/visual-studio-marketplace/i/vinodkumarkj12.d365fo-ai-co-lead?style=flat&color=0e7490)](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> Built by [@vjanardhana12](https://github.com/vjanardhana12). Published as `vinodkumarkj12` on the VS Code Marketplace.
+> Built by [@vjanardhana12](https://github.com/vjanardhana12). Distributed via [GitHub Releases](https://github.com/vjanardhana12/d365fo-ai-co-lead/releases/latest).
 
 ---
 
@@ -298,7 +294,7 @@ This is a personal project published independently. Not an official Microsoft pr
 
 ## Quick start
 
-1. **Install** the extension from the [Marketplace](https://marketplace.visualstudio.com/items?itemName=vinodkumarkj12.d365fo-ai-co-lead).
+1. **Install** the extension: download the latest VSIX from [GitHub Releases](https://github.com/vjanardhana12/d365fo-ai-co-lead/releases/latest) and run `code --install-extension d365fo-ai-co-lead-1.0.0.vsix`.
 2. Set your role(s): **Settings → search "d365fo.myRoles"** (multi-select).
 3. Click the **D365 F&O AI Co-Lead** icon in the activity bar.
 4. **Add an identity** (your ADO email + PAT). PAT is validated, encrypted in `SecretStorage`.

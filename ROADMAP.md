@@ -118,4 +118,4 @@ The dashboard's **Coming soon** section renders these tiles greyed-out with vers
 
 - **Semantic versioning.** v1.x = additive features. v2.0 = breaking changes (e.g. command ID rename without auto-migration).
 - **Release cadence:** monthly minor when feature is ready; patches as needed.
-- **Marketplace publish:** `vinodkumarkj12.d365fo-ai-co-lead`.
+- **Distribution:** GitHub Releases at https://github.com/vjanardhana12/d365fo-ai-co-lead/releases (no Marketplace dependency).
