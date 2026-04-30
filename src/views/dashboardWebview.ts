@@ -56,6 +56,18 @@ export function openDashboard(
         await runInlineTest(connections, identities);
         render();
         break;
+      case 'recheckKits': {
+        const changed = await refreshKitAccessForActive(connections, identities, { force: true });
+        const conn = connections.getActive();
+        const granted = conn ? Object.entries(conn.kitAccess ?? {}).filter(([, v]) => v.granted).map(([k]) => k) : [];
+        const denied  = conn ? Object.entries(conn.kitAccess ?? {}).filter(([, v]) => !v.granted).map(([k]) => k) : [];
+        const parts = [];
+        if (granted.length) parts.push(`granted: ${granted.join(', ')}`);
+        if (denied.length)  parts.push(`denied: ${denied.join(', ')}`);
+        vscode.window.showInformationMessage(`Kit access re-checked. ${parts.join(' | ') || 'no kits configured.'}`);
+        if (changed) render();
+        break;
+      }
       case 'refresh':
         render();
         break;
@@ -145,6 +157,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
            </div>
            <div class="active-actions">
              <button class="btn-primary" data-action="testActive">Test</button>
+             <button class="btn-secondary" data-action="recheckKits" title="Re-check whether your identity has access to any customer kits (e.g. CB Spec Kit)">Re-check kits</button>
              <button class="btn-secondary" data-cmd-item="d365fo.connections.edit" data-item-key="connection" data-payload='${escAttr(JSON.stringify(active))}'>Edit</button>
            </div>
          </div>
