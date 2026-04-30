@@ -76,8 +76,6 @@ export function registerCbSpecKitCommand(
       const spec = { ...(conn.projectSpec ?? {}) };
       spec.kit = 'carlsberg';                              // ensure kit is flagged
       spec.kitData = { ...(spec.kitData ?? {}), carlsberg: updated };
-      // Default reviewer convention if blank
-      if (!spec.defaultReviewer) spec.defaultReviewer = 'hqkumvin@carlsberggroup.com';
       if (!spec.codeReviewPercent) spec.codeReviewPercent = 10;
 
       connections.upsert({ ...conn, projectSpec: spec });

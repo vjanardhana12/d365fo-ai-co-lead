@@ -5,8 +5,8 @@ import { showForm } from '../views/formWebview';
 import { importFromWorkspaceFolder, WorkspaceImport } from '../services/workspaceImporter';
 
 const KITS: { value: string; label: string; description: string }[] = [
-  { value: 'generic',   label: 'Generic',   description: 'No customer-specific overlays' },
-  { value: 'carlsberg', label: 'Carlsberg', description: 'Enables CB Spec Kit tile (custom fields, stakeholders)' },
+  { value: 'generic',   label: 'Generic',                description: 'Standard F&O project, no customer-specific overlays' },
+  { value: 'carlsberg', label: 'Customer overlay (template)', description: 'Reference template — enables a customer-specific tile (custom fields, stakeholders)' },
 ];
 
 export function registerProjectKitCommand(
@@ -61,7 +61,7 @@ export function registerProjectKitCommand(
       const result = await showForm(ctx, 'Project Initiation Kit', [
         // ── Identity / connection ────────────────────────────────────
         { key: 'name', label: 'Project name', type: 'text', required: true,
-          value: sug?.name, placeholder: 'e.g. Carlsberg HUB',
+          value: sug?.name, placeholder: 'e.g. My Project HUB',
           help: 'Display name for this project connection.' },
         { key: 'kit', label: 'Kit (overlay)', type: 'select', required: true,
           value: sug?.name?.toLowerCase().includes('carlsberg') ? 'carlsberg' : 'generic',
@@ -82,9 +82,9 @@ export function registerProjectKitCommand(
         { key: 'prefix', label: 'Prefix (object name prefix)', type: 'text',
           value: sp?.prefix, placeholder: 'e.g. CHB' },
         { key: 'defaultModel', label: 'Default model (display name)', type: 'text',
-          value: sp?.defaultModel, placeholder: 'e.g. Carlsberg Hungary And Balkans' },
+          value: sp?.defaultModel, placeholder: 'e.g. My Project Model' },
         { key: 'defaultPackage', label: 'Default package (folder name)', type: 'text',
-          value: sp?.defaultPackage, placeholder: 'e.g. CarlsbergHungaryAndBalkans' },
+          value: sp?.defaultPackage, placeholder: 'e.g. MyProjectPackage' },
         { key: 'packagesLocalDirectory', label: 'PackagesLocalDirectory', type: 'folder',
           value: sp?.packagesLocalDirectory },
         { key: 'customMetadataDirectory', label: 'CustomMetadataDirectory (primary repo metadata)', type: 'folder',
