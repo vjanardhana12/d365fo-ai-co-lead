@@ -1,6 +1,40 @@
 import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 
+/**
+ * Project-level spec optionally attached to a Connection. Captures the kind
+ * of details a dev lead needs in one place: D365 F&O paths/prefix/model,
+ * ADO defaults (iteration, reviewer, CE work item type), and an optional
+ * "kit" slot for customer-specific overlays (e.g. CB Spec Kit).
+ *
+ * All fields are optional so existing connections keep working.
+ */
+export interface ProjectSpec {
+  /** Free-form kit identifier — e.g. 'generic' | 'carlsberg'. Drives which kit-specific tiles light up. */
+  kit?: string;
+
+  // ── D365 F&O dev box ─────────────────────────────────────────────
+  prefix?: string;                  // e.g. CHB
+  defaultModel?: string;            // display name with spaces
+  defaultPackage?: string;          // package directory name
+  packagesLocalDirectory?: string;
+  customMetadataDirectory?: string;
+  additionalMetadataDirectories?: string[];
+  projectsDirectory?: string;
+  labelLanguages?: string[];
+  repoRoot?: string;                // root checkout folder for source control
+
+  // ── ADO defaults for dev-task creation ───────────────────────────
+  iteration?: string;               // sprint / iteration path
+  defaultReviewer?: string;         // email/display for Code Review tasks
+  ceWorkItemType?: string;          // e.g. "Code Extensions" | "Task" | "User Story"
+  codeReviewPercent?: number;       // default 10
+
+  // ── Free-form kit overlay ────────────────────────────────────────
+  /** Kit-specific extra payload (e.g. Carlsberg custom fields, stakeholders, etc.) — opaque to the runner. */
+  kitData?: Record<string, unknown>;
+}
+
 export interface Connection {
   id: string;
   name: string;
@@ -10,6 +44,8 @@ export interface Connection {
   workingFolder?: string;
   notes?: string;
   lastUsedUtc?: string;
+  /** Optional project specification — populated by Project Initiation Kit. */
+  projectSpec?: ProjectSpec;
 }
 
 const KEY = 'd365fo.connections';

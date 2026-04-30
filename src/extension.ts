@@ -1,19 +1,27 @@
 import * as vscode from 'vscode';
 import { ConnectionStore } from './services/connectionStore';
 import { IdentityStore } from './services/identityStore';
+import { AgentRegistry } from './services/agentRegistry';
 import { ConnectionsTreeProvider } from './views/connectionsTreeProvider';
 import { IdentitiesTreeProvider } from './views/identitiesTreeProvider';
 import { openDashboard, refreshDashboard } from './views/dashboardWebview';
 import { registerConnectionCommands } from './commands/connectionCommands';
 import { registerIdentityCommands } from './commands/identityCommands';
 import { registerNuGetSyncCommand } from './commands/nugetSyncCommand';
-import { registerChatParticipant } from './chat/d365foParticipant';
+import { registerDevTasksCommand } from './commands/devTasksCommand';
+import { registerProjectKitCommand } from './commands/projectKitCommand';
+import { registerCbSpecKitCommand } from './commands/cbSpecKitCommand';
+import { registerManageAgentsCommand } from './commands/manageAgentsCommand';
+import { registerAiModeCommands } from './commands/aiModeCommands';
+import { registerChatParticipants } from './chat/d365foParticipant';
 
 let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext): void {
   const connectionStore = new ConnectionStore(context);
   const identityStore = new IdentityStore(context);
+  const agentRegistry = new AgentRegistry(context);
+  agentRegistry.seedDefaults();
 
   // Tree views
   const connectionsTree = new ConnectionsTreeProvider(connectionStore);
@@ -27,6 +35,11 @@ export function activate(context: vscode.ExtensionContext): void {
   registerConnectionCommands(context, connectionStore, identityStore, connectionsTree, () => updateStatusBar(connectionStore));
   registerIdentityCommands(context, identityStore, identitiesTree);
   registerNuGetSyncCommand(context, connectionStore, identityStore);
+  registerDevTasksCommand(context, connectionStore, identityStore);
+  registerProjectKitCommand(context, connectionStore, identityStore);
+  registerCbSpecKitCommand(context, connectionStore);
+  registerManageAgentsCommand(context, agentRegistry, connectionStore);
+  registerAiModeCommands(context, connectionStore);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('d365fo.openDashboard', () =>
@@ -40,8 +53,8 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // Chat participant
-  registerChatParticipant(context, connectionStore, identityStore);
+  // Chat participants (master + 6 role-specific)
+  registerChatParticipants(context, connectionStore, identityStore, agentRegistry);
 
   // Status bar
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -65,11 +78,11 @@ export function activate(context: vscode.ExtensionContext): void {
 function updateStatusBar(store: ConnectionStore): void {
   const active = store.getActive();
   if (active) {
-    statusBarItem.text = `$(plug) D365 F&O Dev Lead: ${active.name}`;
-    statusBarItem.tooltip = `Active connection: ${active.name}\nProject: ${active.adoProject}\nClick to open dashboard`;
+    statusBarItem.text = `$(rocket) D365 F&O Co-Lead: ${active.name}`;
+    statusBarItem.tooltip = `Active project: ${active.name}\nADO project: ${active.adoProject}\nClick to open dashboard`;
   } else {
-    statusBarItem.text = `$(plug) D365 F&O Dev Lead: no connection`;
-    statusBarItem.tooltip = 'Click to open dashboard and add a connection';
+    statusBarItem.text = `$(rocket) D365 F&O Co-Lead: no project`;
+    statusBarItem.tooltip = 'Click to open dashboard and add a project';
   }
 }
 

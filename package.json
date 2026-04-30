@@ -1,8 +1,8 @@
 {
-  "name": "d365fo-devlead",
-  "displayName": "D365 F&O Dev Lead",
-  "description": "Click-driven dashboard + Copilot chat agent for Dynamics 365 Finance & Operations dev leads. Connections, identities, NuGet sync, PR review, pre-checks, releases.",
-  "version": "0.2.9",
+  "name": "d365fo-ai-co-lead",
+  "displayName": "D365 Finance & Operations AI Co-Lead",
+  "description": "AI-powered cockpit for the entire D365 F&O delivery lifecycle. Role-aware dashboards (Architect, FC, Dev Lead, Developer, Tester, PM), an in-product Agent Factory, and Copilot chat partners powered by D365FODevMCP, DevMachine and ADO MCP servers.",
+  "version": "1.0.0",
   "publisher": "vinodkumarkj12",
   "engines": {
     "vscode": "^1.92.0"
@@ -20,12 +20,16 @@
     "x++",
     "azure devops",
     "nuget",
-    "dev lead"
+    "ai",
+    "agent",
+    "copilot",
+    "co-lead",
+    "mcp"
   ],
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vjanardhana12/d365fo-devlead.git"
+    "url": "https://github.com/vjanardhana12/d365fo-ai-co-lead.git"
   },
   "license": "MIT",
   "main": "./dist/extension.js",
@@ -37,7 +41,7 @@
       "activitybar": [
         {
           "id": "d365fo",
-          "title": "D365 F&O Dev Lead",
+          "title": "D365 F&O AI Co-Lead",
           "icon": "media/activitybar.svg"
         }
       ]
@@ -61,7 +65,7 @@
     "viewsWelcome": [
       {
         "view": "d365fo.identities",
-        "contents": "Identities are *who* you authenticate as (display name + email + ADO PAT).\n\n[+ Add identity](command:d365fo.identities.add)\n[Open dashboard](command:d365fo.openDashboard)\n\n[Learn more](https://github.com/vjanardhana12/d365fo-devlead#readme)"
+        "contents": "Identities are *who* you authenticate as (display name + email + ADO PAT).\n\n[+ Add identity](command:d365fo.identities.add)\n[Open dashboard](command:d365fo.openDashboard)\n\n[Learn more](https://github.com/vjanardhana12/d365fo-ai-co-lead#readme)"
       },
       {
         "view": "d365fo.connections",
@@ -133,6 +137,41 @@
         "command": "d365fo.nugetSync.showOutput",
         "title": "D365FO: Show NuGet Sync Output",
         "icon": "$(output)"
+      },
+      {
+        "command": "d365fo.devTasks.create",
+        "title": "D365FO: Create Dev Tasks (ADO)",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "d365fo.devTasks.showOutput",
+        "title": "D365FO: Show Dev Tasks Output",
+        "icon": "$(output)"
+      },
+      {
+        "command": "d365fo.projectKit.init",
+        "title": "D365FO: Project Initiation Kit",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "d365fo.cbSpecKit.edit",
+        "title": "D365FO: Edit CB Spec Kit",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "d365fo.agents.manage",
+        "title": "D365FO: Manage Agents",
+        "icon": "$(person-add)"
+      },
+      {
+        "command": "d365fo.agents.invoke",
+        "title": "D365FO: Ask an Agent",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "d365fo.devTasks.askAi",
+        "title": "D365FO: Dev Tasks - Ask AI for plan",
+        "icon": "$(sparkle)"
       }
     ],
     "menus": {
@@ -198,42 +237,87 @@
     },
     "chatParticipants": [
       {
-        "id": "d365fo.devlead",
-        "name": "d365fo",
-        "fullName": "D365 F&O Dev Lead",
-        "description": "Run dev-lead actions on D365 F&O - connections, NuGet sync, PRs, pre-checks.",
+        "id": "d365fo.coLead",
+        "name": "d365fo-co-lead",
+        "fullName": "D365 F&O AI Co-Lead",
+        "description": "Master orchestrator across the F&O delivery lifecycle. Routes to role-specific agents (architect, fc, dev-lead, developer, tester, pm).",
         "isSticky": true,
         "commands": [
-          {
-            "name": "dashboard",
-            "description": "Open the D365 F&O dashboard"
-          },
-          {
-            "name": "connections",
-            "description": "List configured connections"
-          },
-          {
-            "name": "test",
-            "description": "Test the active connection"
-          },
-          {
-            "name": "sync",
-            "description": "Run NuGet sync for the active connection"
-          },
-          {
-            "name": "prs",
-            "description": "Show open pull requests (coming soon)"
-          },
-          {
-            "name": "estimate",
-            "description": "Estimate a work item (coming soon)"
-          }
+          { "name": "dashboard", "description": "Open the AI Co-Lead dashboard" },
+          { "name": "connections", "description": "List configured project connections" },
+          { "name": "agents", "description": "List available agents" },
+          { "name": "role", "description": "Show or set your active role(s)" }
         ]
+      },
+      {
+        "id": "d365fo.architect",
+        "name": "d365fo-architect",
+        "fullName": "D365 F&O Architect (AI Co-Lead)",
+        "description": "Solution / delivery architect partner. HLD, integration design, ARB readiness.",
+        "isSticky": true
+      },
+      {
+        "id": "d365fo.fc",
+        "name": "d365fo-fc",
+        "fullName": "D365 F&O Functional Consultant (AI Co-Lead)",
+        "description": "FC partner. FDD authoring, fit-gap, configuration workbook, UAT scripts.",
+        "isSticky": true
+      },
+      {
+        "id": "d365fo.devLead",
+        "name": "d365fo-dev-lead",
+        "fullName": "D365 F&O Dev Lead (AI Co-Lead)",
+        "description": "Dev lead partner. Dev tasks, PR triage, capacity, build / NuGet sync.",
+        "isSticky": true,
+        "commands": [
+          { "name": "sync", "description": "Run NuGet sync" },
+          { "name": "devtasks", "description": "Plan / create ADO Dev Tasks" },
+          { "name": "test", "description": "Test the active connection" }
+        ]
+      },
+      {
+        "id": "d365fo.developer",
+        "name": "d365fo-developer",
+        "fullName": "D365 F&O Developer (AI Co-Lead)",
+        "description": "Developer partner. Implement-from-FDD, fix BP / UT, code coverage, X++ help.",
+        "isSticky": true
+      },
+      {
+        "id": "d365fo.tester",
+        "name": "d365fo-tester",
+        "fullName": "D365 F&O Tester (AI Co-Lead)",
+        "description": "Tester partner. Test cases from FDD, ATC/RSAT scripts, defect triage.",
+        "isSticky": true
+      },
+      {
+        "id": "d365fo.pm",
+        "name": "d365fo-pm",
+        "fullName": "D365 F&O PM (AI Co-Lead)",
+        "description": "Project manager partner. Status rollup, burndown, risk view (coming soon).",
+        "isSticky": true
       }
     ],
     "configuration": {
-      "title": "D365 F&O Dev Lead",
+      "title": "D365 F&O AI Co-Lead",
       "properties": {
+        "d365fo.myRoles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "architect",
+              "fc",
+              "dev-lead",
+              "developer",
+              "tester",
+              "pm"
+            ]
+          },
+          "default": [
+            "dev-lead"
+          ],
+          "description": "Your role(s) on F&O projects. The dashboard filters tiles to those relevant to these roles. Multi-select for techno-functional or hybrid roles."
+        },
         "d365fo.storageMode": {
           "type": "string",
           "enum": [
@@ -292,6 +376,7 @@
     "@types/vscode": "^1.92.0",
     "@vscode/vsce": "^3.2.0",
     "esbuild": "^0.24.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.5.0"
   }
 }

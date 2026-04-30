@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
-import { ConnectionStore } from '../services/connectionStore';
+import { Connection, ConnectionStore } from '../services/connectionStore';
 import { IdentityStore } from '../services/identityStore';
 import { testProject } from '../services/adoClient';
+import { LastDevTaskResult } from '../commands/devTasksCommand';
 
 interface LastNuGetResult { ok: boolean; pushed: number; skipped: number; failed: number; whenIso: string; durationSec: number; }
 const LAST_NUGET_RESULT_KEY = 'd365fo.lastNuGetSyncResult';
+const LAST_DEVTASKS_RESULT_KEY = 'd365fo.devTasks.lastResult';
 
 let panel: vscode.WebviewPanel | undefined;
 let renderFn: (() => void) | undefined;
@@ -19,7 +21,7 @@ export function openDashboard(
 
   panel = vscode.window.createWebviewPanel(
     'd365fo.dashboard',
-    'Dev Lead Dashboard',
+    'D365 F&O AI Co-Lead',
     vscode.ViewColumn.Active,
     { enableScripts: true, retainContextWhenHidden: true },
   );
@@ -95,6 +97,9 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
   const ids = identities.loadAll();
   const active = connections.getActive();
   const lastNuGet = ctx.globalState.get<LastNuGetResult>(LAST_NUGET_RESULT_KEY);
+  const lastDevTasks = ctx.globalState.get<LastDevTaskResult>(LAST_DEVTASKS_RESULT_KEY);
+  const roles = vscode.workspace.getConfiguration('d365fo').get<string[]>('myRoles', ['dev-lead']);
+  const agentCount = ctx.globalState.get<{ id: string }[]>('d365fo.agents.global', []).length;
 
   // Top block: walk the user through setup in order (Identity -> Connection -> Active).
   let topBlock: string;
@@ -233,36 +238,39 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     .snap-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--vscode-descriptionForeground); }
     .snap-when { font-size: 11px; color: var(--vscode-descriptionForeground); }
     .snap-stats b { color: var(--vscode-foreground); }
-    .tile-actions { margin-top: 10px; display: flex; gap: 6px; }
+    .tile-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .role-badge { display: inline-block; padding: 2px 8px; margin: 0 2px; font-size: 11px; border-radius: 10px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
+    .role-tag { display: inline-block; padding: 1px 6px; margin: 4px 4px 0 0; font-size: 10px; border-radius: 3px; background: color-mix(in srgb, var(--vscode-foreground) 8%, transparent); color: var(--vscode-descriptionForeground); }
+    .role-tags { margin-top: 8px; }
+    .ver-badge { display: inline-block; padding: 1px 6px; font-size: 10px; border-radius: 3px; margin-left: 6px; vertical-align: middle; font-weight: 600; }
+    .ver-v1\.1 { background: color-mix(in srgb, #22d3ee 25%, transparent); color: #22d3ee; }
+    .ver-v1\.2 { background: color-mix(in srgb, #a78bfa 25%, transparent); color: #a78bfa; }
+    .ver-v2   { background: color-mix(in srgb, #f59e0b 25%, transparent); color: #f59e0b; }
   </style></head><body>
-    <h1>Dev Lead</h1>
-    <div class="sub">D365 F&amp;O dashboard - manage connections, identities, and run dev-lead tools without leaving VS Code.</div>
+    <h1>D365 F&amp;O AI Co-Lead</h1>
+    <div class="sub">Your AI partner across the F&amp;O delivery lifecycle &mdash; Architect, FC, Dev Lead, Developer, Tester, PM. <a data-cmd="workbench.action.openSettings" data-cmd-args='["d365fo.myRoles"]'>${renderRoleBadges(roles)}</a></div>
 
     ${topBlock}
 
-    <h2>Quick actions</h2>
+    <h2>Tools <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">- generic, work with any project</span></h2>
     <div class="grid">
       ${renderNuGetTile(lastNuGet)}
-      <div class="tile" data-cmd="d365fo.nugetSync.showOutput">
-        <h3>Show last sync output</h3>
-        <p>Open the NuGet Sync log channel</p>
+      <div class="tile" data-cmd="d365fo.projectKit.init">
+        <h3>Project Initiation Kit</h3>
+        <p>Create a new project connection (import from folder or start blank)</p>
       </div>
-      <div class="tile disabled">
-        <h3>Pull Requests</h3>
-        <p>List open PRs - coming soon</p>
-      </div>
-      <div class="tile disabled">
-        <h3>Pre-Checks</h3>
-        <p>Branch / build validation - coming soon</p>
-      </div>
-      <div class="tile disabled">
-        <h3>Releases</h3>
-        <p>Pipeline release management - coming soon</p>
-      </div>
-      <div class="tile disabled">
-        <h3>Estimate</h3>
-        <p>AI-assisted work item estimation - coming soon</p>
-      </div>
+      ${renderManageAgentsTile(agentCount)}
+    </div>
+
+    <h2>${active ? `Project: ${esc(active.name)}` : 'Project'} <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">${active ? renderProjectMeta(active) : '- pick or add a project to enable'}</span></h2>
+    <div class="grid">
+      ${active ? renderDevTasksTile(lastDevTasks) : `<div class="tile disabled"><h3>Create Dev Tasks</h3><p>Generate task hierarchy under a parent work item</p></div>`}
+      ${active && active.projectSpec?.kit === 'carlsberg' ? renderCbSpecKitTile(active) : ''}
+    </div>
+
+    <h2>Coming soon <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">- roadmap by role &amp; version</span></h2>
+    <div class="grid">
+      ${renderComingSoon(roles)}
     </div>
 
     <div class="table-header">
@@ -367,6 +375,7 @@ function renderNuGetTile(r: LastNuGetResult | undefined): string {
     <div class="tile-actions">
       <button class="btn-primary" data-cmd-args="d365fo.nugetSync.run" data-args='${escAttr(JSON.stringify([{ useLast: true }]))}'>Run sync</button>
       <button class="btn-tiny" data-cmd="d365fo.nugetSync.run">Edit + run...</button>
+      <button class="btn-tiny" data-cmd="d365fo.nugetSync.showOutput">Output</button>
     </div>
   </div>`;
 }
@@ -380,4 +389,140 @@ function relTime(iso: string): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+function renderProjectMeta(c: Connection): string {
+  const parts: string[] = [];
+  if (c.projectSpec?.kit) parts.push(`kit: <b>${esc(c.projectSpec.kit)}</b>`);
+  if (c.projectSpec?.prefix) parts.push(`prefix: <b>${esc(c.projectSpec.prefix)}</b>`);
+  if (c.projectSpec?.defaultModel) parts.push(`model: <b>${esc(c.projectSpec.defaultModel)}</b>`);
+  return parts.length ? `- ${parts.join(' | ')}` : '- bound to active connection';
+}
+
+function renderCbSpecKitTile(c: Connection): string {
+  const kd = (c.projectSpec?.kitData?.carlsberg ?? {}) as { ceCustomFields?: Record<string,string>; taskCustomFields?: Record<string,string>; stakeholders?: { name: string; guid: string }[] };
+  const ceCount = kd.ceCustomFields ? Object.keys(kd.ceCustomFields).length : 0;
+  const tkCount = kd.taskCustomFields ? Object.keys(kd.taskCustomFields).length : 0;
+  const shCount = kd.stakeholders?.length ?? 0;
+  const configured = ceCount + tkCount + shCount > 0;
+  return `<div class="tile tile-snap">
+    <h3>CB Spec Kit</h3>
+    <p>Carlsberg overlay: custom fields, stakeholder mentions, reviewer defaults</p>
+    ${configured ? `<div class="snap ok">
+      <div class="snap-row"><span class="snap-label">Configured</span><span class="snap-when">overlay active</span></div>
+      <div class="snap-stats"><b>${ceCount}</b> CE fields, <b>${tkCount}</b> task fields, <b>${shCount}</b> stakeholders</div>
+    </div>` : `<div class="snap fail">
+      <div class="snap-row"><span class="snap-label">Not configured</span><span class="snap-when">defaults will apply</span></div>
+    </div>`}
+    <div class="tile-actions">
+      <button class="btn-primary" data-cmd="d365fo.cbSpecKit.edit">${configured ? 'Edit' : 'Configure'}</button>
+    </div>
+  </div>`;
+}
+
+function renderDevTasksTile(r: LastDevTaskResult | undefined): string {
+  if (!r) {
+    return `<div class="tile">
+      <h3>Create Dev Tasks</h3>
+      <p>Generate task hierarchy under a parent work item in ADO</p>
+      <div class="tile-actions">
+        <button class="btn-primary" data-cmd="d365fo.devTasks.create">Plan + create</button>
+        <button class="btn-tiny" data-cmd="d365fo.devTasks.askAi" title="Ask the @d365fo-dev-lead AI partner to plan tasks">$(sparkle) Ask AI</button>
+      </div>
+    </div>`;
+  }
+  const cls = r.ok ? 'snap ok' : 'snap fail';
+  const stamp = `${formatTime(r.whenIso)} - ${relTime(r.whenIso)}`;
+  const stats = r.ok
+    ? `<b>${r.created}</b> created${r.skipped ? `, <b>${r.skipped}</b> skipped` : ''}${r.failed ? `, <b>${r.failed}</b> failed` : ''}`
+    : `<b>${r.failed}</b> failed${r.created ? `, <b>${r.created}</b> created` : ''}`;
+  const dur = `${Math.floor(r.durationSec / 60)}m ${r.durationSec % 60}s`;
+  const presetBadge = r.preset ? `<span class="muted">[${esc(r.preset)}]</span> ` : '';
+  return `<div class="tile tile-snap">
+    <h3>Create Dev Tasks</h3>
+    <p>Generate task hierarchy under a parent work item in ADO</p>
+    <div class="${cls}">
+      <div class="snap-row"><span class="snap-label">Last run</span><span class="snap-when">${esc(stamp)}</span></div>
+      <div class="snap-stats">${presetBadge}Parent <b>#${esc(r.parentId)}</b> - ${stats} <span class="muted">- ${dur}</span></div>
+    </div>
+    <div class="tile-actions">
+      <button class="btn-primary" data-cmd-args="d365fo.devTasks.create" data-args='${escAttr(JSON.stringify([{ useLast: true }]))}'>Run again</button>
+      <button class="btn-tiny" data-cmd="d365fo.devTasks.create">Edit + create...</button>
+      <button class="btn-tiny" data-cmd="d365fo.devTasks.askAi" title="Ask the @d365fo-dev-lead AI partner to plan tasks">$(sparkle) Ask AI</button>
+      <button class="btn-tiny" data-cmd="d365fo.devTasks.showOutput">Output</button>
+    </div>
+  </div>`;
+}
+
+
+// --- Role-aware rendering helpers (v1.0) ----------------------------------
+
+const ROLE_LABEL: Record<string, string> = {
+  'architect': 'Architect',
+  'fc': 'FC',
+  'dev-lead': 'Dev Lead',
+  'developer': 'Developer',
+  'tester': 'Tester',
+  'pm': 'PM',
+};
+
+function renderRoleBadges(roles: string[]): string {
+  if (!roles || roles.length === 0) return 'set your role(s)';
+  const badges = roles.map(r => `<span class="role-badge">${esc(ROLE_LABEL[r] ?? r)}</span>`).join(' ');
+  return `Viewing as: ${badges}`;
+}
+
+function renderManageAgentsTile(count: number): string {
+  return `<div class="tile">
+    <h3>Manage Agents <span class="muted" style="font-weight:400;font-size:11px;">(${count})</span></h3>
+    <p>Create role-aware AI agents � each with its own system prompt + MCP servers</p>
+    <div class="tile-actions">
+      <button class="btn-primary" data-cmd="d365fo.agents.manage">Open</button>
+      <button class="btn-tiny" data-cmd="d365fo.agents.invoke">Ask an agent</button>
+    </div>
+  </div>`;
+}
+
+interface ComingSoonTile {
+  title: string;
+  desc: string;
+  roles: string[];
+  version: 'v1.1' | 'v1.2' | 'v2';
+}
+
+const COMING_SOON: ComingSoonTile[] = [
+  // -- v1.1 (next) -----------------------------------------
+  { title: 'FDD Authoring',          desc: 'AI-drafted FDDs from a requirement description, fit/gap matrix.', roles: ['fc','architect'], version: 'v1.1' },
+  { title: 'Solution Design (HLD)',  desc: 'Architecture + integration design, ARB checklist.',                roles: ['architect'],       version: 'v1.1' },
+  { title: 'TDD from FDD',           desc: 'Generate technical design referencing AOT objects via D365FODevMCP.', roles: ['developer','dev-lead'], version: 'v1.1' },
+  { title: 'Implement from TDD',     desc: 'Build tables/classes/forms via D365FODevMCP, fix BP errors.',      roles: ['developer'],       version: 'v1.1' },
+  { title: 'Test Cases from FDD',    desc: 'Generate functional test cases + RSAT/ATC scaffolds.',             roles: ['tester'],          version: 'v1.1' },
+  { title: 'PR Triage',              desc: 'List + review open PRs, suggest reviewers, summarise diffs.',      roles: ['dev-lead','developer'], version: 'v1.1' },
+  { title: 'Defect Triage',          desc: 'Aggregate test failures, suggest root cause + assign back.',       roles: ['tester','dev-lead'], version: 'v1.1' },
+  { title: 'Project Spec ? Repo',    desc: 'Commit projectSpec to <repo>/.d365fo-co-lead/project.json � team sync.', roles: ['architect','fc','dev-lead'], version: 'v1.1' },
+  { title: 'Per-Agent Evals',        desc: 'Run agent against project eval dataset; pass-rate trend.',         roles: ['architect','dev-lead'], version: 'v1.1' },
+  { title: 'Telemetry (opt-in)',     desc: 'Anonymised tile usage to Application Insights for adoption metrics.', roles: ['dev-lead','pm'], version: 'v1.1' },
+
+  // -- v1.2 ------------------------------------------------
+  { title: 'Status & Burndown',      desc: 'Sprint rollup, burndown, blockers � for PMs and leads.',           roles: ['pm','dev-lead','architect'], version: 'v1.2' },
+  { title: 'Risk Register',          desc: 'Tracked risks, owners, mitigation status.',                        roles: ['pm','architect'],   version: 'v1.2' },
+  { title: 'Release Notes',          desc: 'Auto-draft release notes from merged PRs / closed work items.',    roles: ['dev-lead','pm'],    version: 'v1.2' },
+  { title: 'UAT Script Pack',        desc: 'Bundle test cases + screenshots into UAT-ready document.',         roles: ['fc','tester'],      version: 'v1.2' },
+  { title: 'Code Review Coach',      desc: 'AI checklist run on PR diff aligned with project conventions.',    roles: ['developer','dev-lead'], version: 'v1.2' },
+
+  // -- v2 --------------------------------------------------
+  { title: 'Multi-Agent Orchestration', desc: 'Master Co-Lead routes complex requests across multiple role agents.', roles: ['architect','dev-lead'], version: 'v2' },
+  { title: 'Patent / IP Pack',          desc: 'Auto-generate disclosure docs from delivery artefacts.',           roles: ['architect','pm'],          version: 'v2' },
+  { title: 'Customer Portal Export',    desc: 'Publish project status + design pack to a customer portal.',       roles: ['pm'],                       version: 'v2' },
+];
+
+function renderComingSoon(myRoles: string[]): string {
+  // Filter by role overlap (any match), but always show "all" tagged tiles too.
+  const filtered = COMING_SOON.filter(t => t.roles.some(r => myRoles.includes(r)));
+  const list = filtered.length > 0 ? filtered : COMING_SOON; // if no role match, show everything
+  return list.map(t => `<div class="tile disabled" title="${esc(t.title)} � ${esc(t.version)}">
+    <h3>${esc(t.title)} <span class="ver-badge ver-${t.version}">${t.version}</span></h3>
+    <p>${esc(t.desc)}</p>
+    <div class="role-tags">${t.roles.map(r => `<span class="role-tag">${esc(ROLE_LABEL[r] ?? r)}</span>`).join('')}</div>
+  </div>`).join('\n');
 }
