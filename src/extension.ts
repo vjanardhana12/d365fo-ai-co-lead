@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerNuGetSyncCommand(context, connectionStore, identityStore);
   registerDevTasksCommand(context, connectionStore, identityStore);
   registerProjectKitCommand(context, connectionStore, identityStore);
-  registerCbSpecKitCommand(context, connectionStore);
+  registerCbSpecKitCommand(context, connectionStore, identityStore);
   registerManageAgentsCommand(context, agentRegistry, connectionStore);
   registerAiModeCommands(context, connectionStore);
 

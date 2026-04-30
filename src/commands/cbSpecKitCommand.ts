@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import { ConnectionStore } from '../services/connectionStore';
 import { showForm } from '../views/formWebview';
+import { isKitGranted, refreshKitAccessForActive } from '../services/kitAccessProbe';
+import { IdentityStore } from '../services/identityStore';
 
 /**
  * Carlsberg-specific kit overlay. Stored under
@@ -36,17 +38,21 @@ const DEFAULTS: CarlsbergKitData = {
 export function registerCbSpecKitCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
+  identities: IdentityStore,
 ): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('d365fo.cbSpecKit.edit', async () => {
       const conn = connections.getActive();
       if (!conn) { vscode.window.showWarningMessage('No active project. Create one via Project Initiation Kit first.'); return; }
-      if (conn.projectSpec?.kit !== 'carlsberg') {
-        const ok = await vscode.window.showWarningMessage(
-          `Active project '${conn.name}' is not marked as a Carlsberg kit. Apply CB defaults anyway?`,
-          { modal: true }, 'Apply',
+
+      // Live access gate: re-check if needed, then refuse if not granted.
+      await refreshKitAccessForActive(connections, identities);
+      const fresh = connections.getActive();
+      if (!isKitGranted(fresh, 'carlsberg')) {
+        vscode.window.showWarningMessage(
+          `This kit requires read access to https://dev.azure.com/carlsberggroup. Your active connection's identity does not have that access.`,
         );
-        if (ok !== 'Apply') return;
+        return;
       }
 
       const existing = (conn.projectSpec?.kitData?.carlsberg as CarlsbergKitData | undefined) ?? {};

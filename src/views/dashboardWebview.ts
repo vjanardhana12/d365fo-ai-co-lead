@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { Connection, ConnectionStore } from '../services/connectionStore';
 import { IdentityStore } from '../services/identityStore';
 import { testProject } from '../services/adoClient';
+import { refreshKitAccessForActive, isKitGranted } from '../services/kitAccessProbe';
 import { LastDevTaskResult } from '../commands/devTasksCommand';
 
 interface LastNuGetResult { ok: boolean; pushed: number; skipped: number; failed: number; whenIso: string; durationSec: number; }
@@ -48,6 +49,8 @@ export function openDashboard(
         connections.setActive(msg.id);
         lastTestResult = undefined; // stale once active changes
         render();
+        // Re-probe kit access for the newly active connection in the background.
+        void refreshKitAccessForActive(connections, identities, { force: true }).then(changed => { if (changed) render(); });
         break;
       case 'testActive':
         await runInlineTest(connections, identities);
@@ -66,6 +69,8 @@ export function openDashboard(
   renderFn = render;
 
   render();
+  // Trigger live kit-access probe in background; re-render when results change.
+  void refreshKitAccessForActive(connections, identities).then(changed => { if (changed) render(); });
 }
 
 export function refreshDashboard(): void {
@@ -265,7 +270,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     <h2>${active ? `Project: ${esc(active.name)}` : 'Project'} <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">${active ? renderProjectMeta(active) : '- pick or add a project to enable'}</span></h2>
     <div class="grid">
       ${active ? renderDevTasksTile(lastDevTasks) : `<div class="tile disabled"><h3>Create Dev Tasks</h3><p>Generate task hierarchy under a parent work item</p></div>`}
-      ${active && active.projectSpec?.kit === 'carlsberg' ? renderCbSpecKitTile(active) : ''}
+      ${active && isKitGranted(active, 'carlsberg') ? renderCbSpecKitTile(active) : ''}
     </div>
 
     <h2>Coming soon <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">- roadmap by role &amp; version</span></h2>

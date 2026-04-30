@@ -46,6 +46,12 @@ export interface Connection {
   lastUsedUtc?: string;
   /** Optional project specification — populated by Project Initiation Kit. */
   projectSpec?: ProjectSpec;
+  /**
+   * Per-kit access cache. Populated by the kit access probe (live ADO check
+   * against the kit's owning org). A kit-specific tile renders ONLY if
+   * `kitAccess[kit].granted === true`. Probes re-run on dashboard open / set-active.
+   */
+  kitAccess?: Record<string, { granted: boolean; checkedUtc: string; reason?: string }>;
 }
 
 const KEY = 'd365fo.connections';

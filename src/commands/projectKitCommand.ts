@@ -4,11 +4,6 @@ import { IdentityStore } from '../services/identityStore';
 import { showForm } from '../views/formWebview';
 import { importFromWorkspaceFolder, WorkspaceImport } from '../services/workspaceImporter';
 
-const KITS: { value: string; label: string; description: string }[] = [
-  { value: 'generic',   label: 'Generic',                description: 'Standard F&O project, no customer-specific overlays' },
-  { value: 'carlsberg', label: 'Customer overlay (template)', description: 'Reference template — enables a customer-specific tile (custom fields, stakeholders)' },
-];
-
 export function registerProjectKitCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
@@ -63,10 +58,7 @@ export function registerProjectKitCommand(
         { key: 'name', label: 'Project name', type: 'text', required: true,
           value: sug?.name, placeholder: 'e.g. My Project HUB',
           help: 'Display name for this project connection.' },
-        { key: 'kit', label: 'Kit (overlay)', type: 'select', required: true,
-          value: sug?.name?.toLowerCase().includes('carlsberg') ? 'carlsberg' : 'generic',
-          options: KITS,
-          help: 'Generic = no overlays. Pick a customer kit to unlock customer-specific tiles.' },
+
         { key: 'identityId', label: 'Identity', type: 'select', required: true,
           value: idOptions[0]?.value, options: idOptions,
           help: 'ADO PAT-bearing identity used for API calls.' },
@@ -110,9 +102,12 @@ export function registerProjectKitCommand(
       ], 'Save project connection');
       if (!result) return;
 
-      // Build ProjectSpec
+      // Build ProjectSpec. The `kit` field is intentionally NOT collected
+      // from the user — customer-specific kit tiles are gated by a live ADO
+      // access probe (see kitAccessProbe.ts). We carry forward any kit value
+      // detected during workspace import so existing CB workspaces still work.
       const spec: ProjectSpec = {
-        kit: result.kit,
+        kit: imported?.spec.kit,
         prefix: nz(result.prefix),
         defaultModel: nz(result.defaultModel),
         defaultPackage: nz(result.defaultPackage),
