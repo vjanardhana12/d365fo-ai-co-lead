@@ -51,6 +51,28 @@ export function activate(context: vscode.ExtensionContext): void {
       updateStatusBar(connectionStore);
       refreshDashboard();
     }),
+    vscode.commands.registerCommand('d365fo.setRoles', async () => {
+      const cfg = vscode.workspace.getConfiguration('d365fo');
+      const current = cfg.get<string[]>('myRoles', ['dev-lead']);
+      const items: (vscode.QuickPickItem & { value: string })[] = [
+        { label: 'Architect', value: 'architect', description: 'Solution / delivery architect' },
+        { label: 'FC',        value: 'fc',        description: 'Functional consultant' },
+        { label: 'Dev Lead',  value: 'dev-lead',  description: 'Dev lead / tech lead' },
+        { label: 'Developer', value: 'developer', description: 'X++ / extensions developer' },
+        { label: 'Tester',    value: 'tester',    description: 'QA / test engineer' },
+        { label: 'PM',        value: 'pm',        description: 'Project manager' },
+      ];
+      items.forEach(i => { i.picked = current.includes(i.value); });
+      const picked = await vscode.window.showQuickPick(items, {
+        canPickMany: true,
+        title: 'Viewing as \u2014 select your role(s)',
+        placeHolder: 'Multi-select for techno-functional or hybrid roles',
+      });
+      if (!picked) return;
+      const values = picked.map(p => p.value);
+      await cfg.update('myRoles', values.length > 0 ? values : undefined, vscode.ConfigurationTarget.Global);
+      refreshDashboard();
+    }),
   );
 
   // Chat participants (master + 6 role-specific)

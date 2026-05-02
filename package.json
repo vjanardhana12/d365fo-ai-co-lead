@@ -172,6 +172,11 @@
         "command": "d365fo.devTasks.askAi",
         "title": "D365FO: Dev Tasks - Ask AI for plan",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "d365fo.setRoles",
+        "title": "D365FO: Set My Role(s)",
+        "icon": "$(person)"
       }
     ],
     "menus": {

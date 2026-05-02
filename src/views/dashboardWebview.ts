@@ -266,7 +266,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     .ver-v2   { background: color-mix(in srgb, #f59e0b 25%, transparent); color: #f59e0b; }
   </style></head><body>
     <h1>D365 F&amp;O AI Co-Lead</h1>
-    <div class="sub">Your AI partner across the F&amp;O delivery lifecycle &mdash; Architect, FC, Dev Lead, Developer, Tester, PM. <a data-cmd="workbench.action.openSettings" data-cmd-args='["d365fo.myRoles"]'>${renderRoleBadges(roles)}</a></div>
+    <div class="sub">Your AI partner across the F&amp;O delivery lifecycle &mdash; Architect, FC, Dev Lead, Developer, Tester, PM. <a data-cmd="d365fo.setRoles" title="Click to change role(s)">${renderRoleBadges(roles)}</a></div>
 
     ${topBlock}
 
