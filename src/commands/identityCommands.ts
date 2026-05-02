@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { Identity, IdentityStore } from '../services/identityStore';
 import { IdentitiesTreeProvider, IdentityItem } from '../views/identitiesTreeProvider';
 import { showForm } from '../views/formWebview';
-import { validatePat } from '../services/adoClient';
 
 export function registerIdentityCommands(
   ctx: vscode.ExtensionContext,
@@ -73,22 +72,9 @@ export function registerIdentityCommands(
     );
     if (!result) return;
 
-    // Validate PAT against ADO when supplied
-    if (result.pat && result.pat.length > 0) {
-      const v = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: 'Validating PAT...' },
-        () => validatePat(result.email.trim(), result.pat),
-      );
-      if (!v.ok) {
-        const choice = await vscode.window.showErrorMessage(
-          `PAT validation failed (HTTP ${v.status} ${v.reason}). Save anyway?`,
-          'Save anyway', 'Cancel',
-        );
-        if (choice !== 'Save anyway') return;
-      } else {
-        vscode.window.showInformationMessage(`PAT validated for ${v.displayName ?? v.emailAddress ?? result.email}.`);
-      }
-    }
+    // PAT is validated when a Connection is added/tested (which has orgUrl + project context).
+    // Validating here against vssps profile requires "User Profile (Read)" scope which most
+    // PATs don't have, leading to false 401s for PATs that work fine for the actual use cases.
 
     const id: Identity = {
       id: existing?.id ?? store.newId(),
