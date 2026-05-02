@@ -2,7 +2,7 @@
   "name": "d365fo-ai-co-lead",
   "displayName": "D365 Finance & Operations AI Co-Lead",
   "description": "AI-powered cockpit for the entire D365 F&O delivery lifecycle. Role-aware dashboards (Architect, FC, Dev Lead, Developer, Tester, PM), an in-product Agent Factory, and Copilot chat partners powered by D365FODevMCP, DevMachine and ADO MCP servers.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "vinodkumarkj12",
   "engines": {
     "vscode": "^1.92.0"
@@ -208,10 +208,22 @@
         "description": "Master orchestrator across the F&O delivery lifecycle. Routes to role-specific agents (architect, fc, dev-lead, developer, tester, pm).",
         "isSticky": true,
         "commands": [
-          { "name": "dashboard", "description": "Open the AI Co-Lead dashboard" },
-          { "name": "connections", "description": "List configured project connections" },
-          { "name": "agents", "description": "List available agents" },
-          { "name": "role", "description": "Show or set your active role(s)" }
+          {
+            "name": "dashboard",
+            "description": "Open the AI Co-Lead dashboard"
+          },
+          {
+            "name": "connections",
+            "description": "List configured project connections"
+          },
+          {
+            "name": "agents",
+            "description": "List available agents"
+          },
+          {
+            "name": "role",
+            "description": "Show or set your active role(s)"
+          }
         ]
       },
       {
@@ -235,9 +247,18 @@
         "description": "Dev lead partner. Dev tasks, PR triage, capacity, build / NuGet sync.",
         "isSticky": true,
         "commands": [
-          { "name": "sync", "description": "Run NuGet sync" },
-          { "name": "devtasks", "description": "Plan / create ADO Dev Tasks" },
-          { "name": "test", "description": "Test the active connection" }
+          {
+            "name": "sync",
+            "description": "Run NuGet sync"
+          },
+          {
+            "name": "devtasks",
+            "description": "Plan / create ADO Dev Tasks"
+          },
+          {
+            "name": "test",
+            "description": "Test the active connection"
+          }
         ]
       },
       {
