@@ -31,8 +31,7 @@ export interface DevTaskHours {
 export interface DevTaskOptions {
   orgUrl: string;          // https://dev.azure.com/<org>
   project: string;         // ADO project name
-  email: string;           // for Basic auth
-  pat: string;             // ADO PAT
+  authHeader: string;      // precomputed Authorization header (Bearer or Basic)
   parentId: string;        // existing work item ID (e.g. DD)
   developer: string;       // assignee (email or display name) for dev tasks
   reviewer: string;        // assignee for Code Review (defaults to developer)
@@ -239,7 +238,7 @@ interface WorkItem {
 }
 
 function authHeader(opts: DevTaskOptions): string {
-  return 'Basic ' + Buffer.from(`${opts.email}:${opts.pat}`).toString('base64');
+  return opts.authHeader;
 }
 
 function webUrl(opts: DevTaskOptions, id: number): string {

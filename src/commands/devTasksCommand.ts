@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ConnectionStore } from '../services/connectionStore';
-import { IdentityStore } from '../services/identityStore';
 import { showForm } from '../views/formWebview';
 import { createDevTasks, DevTaskHours } from '../services/devTaskRunner';
+import { getAdoTokenInteractive } from '../services/microsoftAuth';
 
 const LAST_INPUT_KEY = 'd365fo.devTasks.lastInput';
 const LAST_RESULT_KEY = 'd365fo.devTasks.lastResult';
@@ -48,7 +48,6 @@ function getChannel(): vscode.OutputChannel {
 export function registerDevTasksCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
 ): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('d365fo.devTasks.showOutput', () => getChannel().show(true)),
@@ -56,10 +55,11 @@ export function registerDevTasksCommand(
     vscode.commands.registerCommand('d365fo.devTasks.create', async (opts?: { useLast?: boolean }) => {
       const conn = connections.getActive();
       if (!conn) { vscode.window.showWarningMessage('No active connection. Add one first.'); return; }
-      const identity = identities.get(conn.identityId);
-      if (!identity) { vscode.window.showWarningMessage('Active connection has no identity.'); return; }
-      const pat = await identities.getSecret(identity.id);
-      if (!pat) { vscode.window.showWarningMessage('Identity has no stored PAT.'); return; }
+      if (!conn.microsoftAccountId) { vscode.window.showWarningMessage('Active connection is not signed in. Edit it and click Sign in.'); return; }
+      let token: string;
+      try { token = await getAdoTokenInteractive(conn.microsoftAccountId, conn.microsoftAccountLabel); }
+      catch (e) { vscode.window.showErrorMessage(`Could not get an ADO token: ${(e as Error).message ?? e}`); return; }
+      const authHeader = `Bearer ${token}`;
 
       const last = ctx.globalState.get<LastInput>(LAST_INPUT_KEY);
 
@@ -88,11 +88,11 @@ export function registerDevTasksCommand(
             value: last?.parentId, placeholder: 'e.g. 81234',
             help: 'The existing parent work item under which the dev hierarchy will be created.' },
           { key: 'developer', label: 'Developer (email or display name)', type: 'text', required: true,
-            value: last?.developer ?? identity.email,
-            placeholder: identity.email,
+            value: last?.developer ?? conn.email,
+            placeholder: conn.email,
             help: 'Assignee for Code Extensions, Tech Review, Tech Design, Unit Testing, Walkthrough.' },
           { key: 'reviewer', label: 'Reviewer (Code Review assignee)', type: 'text', required: true,
-            value: last?.reviewer ?? identity.email,
+            value: last?.reviewer ?? conn.email,
             placeholder: 'reviewer@your-org.com',
             help: 'Assignee for the Code Review task only.' },
           { key: 'preset', label: 'T-shirt preset', type: 'select', required: true,
@@ -156,12 +156,12 @@ export function registerDevTasksCommand(
         await ctx.globalState.update(LAST_INPUT_KEY, input);
 
         if (formResult.dryRun === 'Yes') {
-          await runOnce({ ...input, dryRun: true }, conn, identity, pat, ctx);
+          await runOnce({ ...input, dryRun: true }, conn, authHeader, ctx);
           return;
         }
       }
 
-      await runOnce({ ...input!, dryRun: false }, conn, identity, pat, ctx);
+      await runOnce({ ...input!, dryRun: false }, conn, authHeader, ctx);
     }),
   );
 }
@@ -170,9 +170,8 @@ interface RunInput extends LastInput { dryRun: boolean; }
 
 async function runOnce(
   input: RunInput,
-  conn: { id: string; name: string; adoOrgUrl: string; adoProject: string },
-  identity: { id: string; email: string },
-  pat: string,
+  conn: { id: string; name: string; adoOrgUrl: string; adoProject: string; email: string },
+  authHeader: string,
   ctx: vscode.ExtensionContext,
 ): Promise<void> {
   const ch = getChannel();
@@ -197,8 +196,7 @@ async function runOnce(
   const result = await createDevTasks({
     orgUrl: conn.adoOrgUrl,
     project: conn.adoProject,
-    email: identity.email,
-    pat,
+    authHeader,
     parentId: input.parentId,
     developer: input.developer,
     reviewer: input.reviewer,

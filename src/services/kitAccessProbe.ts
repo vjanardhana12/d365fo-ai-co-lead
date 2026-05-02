@@ -1,6 +1,6 @@
 import { ConnectionStore } from './connectionStore';
-import { IdentityStore } from './identityStore';
-import { probeOrgAccess } from './adoClient';
+import { probeOrgAccessWithAuth } from './adoClient';
+import { getAdoTokenSilent } from './microsoftAuth';
 
 /**
  * Kit access gate.
@@ -40,21 +40,19 @@ const STALE_AFTER_MS = 6 * 60 * 60 * 1000; // re-probe after 6h
  */
 export async function refreshKitAccessForActive(
   connections: ConnectionStore,
-  identities: IdentityStore,
   options: { force?: boolean } = {},
 ): Promise<boolean> {
   const conn = connections.getActive();
   if (!conn) return false;
 
-  const id = identities.get(conn.identityId);
-  if (!id) {
-    // No identity → ensure all kits report denied.
+  if (!conn.microsoftAccountId) {
     return persistAllDenied(connections, conn);
   }
-  const pat = await identities.getSecret(id.id);
-  if (!pat) {
+  const token = await getAdoTokenSilent(conn.microsoftAccountId, conn.microsoftAccountLabel);
+  if (!token) {
     return persistAllDenied(connections, conn);
   }
+  const auth = `Bearer ${token}`;
 
   const access = { ...(conn.kitAccess ?? {}) };
   const nowMs = Date.now();
@@ -67,7 +65,7 @@ export async function refreshKitAccessForActive(
       continue; // recent enough, skip network call
     }
 
-    const result = await probeOrgAccess(kit.orgUrl, id.email, pat);
+    const result = await probeOrgAccessWithAuth(kit.orgUrl, auth);
     const next = {
       granted: result.ok,
       checkedUtc: new Date().toISOString(),
@@ -89,7 +87,7 @@ function persistAllDenied(connections: ConnectionStore, conn: { id: string; kitA
   let changed = false;
   for (const kit of KITS) {
     if (!access[kit.id] || access[kit.id].granted) {
-      access[kit.id] = { granted: false, checkedUtc: nowIso, reason: 'No identity / PAT for this connection' };
+      access[kit.id] = { granted: false, checkedUtc: nowIso, reason: 'Not signed in for this connection' };
       changed = true;
     }
   }

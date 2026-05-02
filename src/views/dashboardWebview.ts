@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { Connection, ConnectionStore } from '../services/connectionStore';
-import { IdentityStore } from '../services/identityStore';
-import { testProject } from '../services/adoClient';
+import { testProjectWithAuth } from '../services/adoClient';
+import { getAdoTokenSilent, getAdoTokenInteractive } from '../services/microsoftAuth';
 import { refreshKitAccessForActive, isKitGranted } from '../services/kitAccessProbe';
 import { LastDevTaskResult } from '../commands/devTasksCommand';
 
@@ -16,7 +16,6 @@ let lastTestResult: { connectionId: string; ok: boolean; message: string; whenIs
 export function openDashboard(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
 ): void {
   if (panel) { panel.reveal(); return; }
 
@@ -50,24 +49,12 @@ export function openDashboard(
         lastTestResult = undefined; // stale once active changes
         render();
         // Re-probe kit access for the newly active connection in the background.
-        void refreshKitAccessForActive(connections, identities, { force: true }).then(changed => { if (changed) render(); });
+        void refreshKitAccessForActive(connections, { force: true }).then(changed => { if (changed) render(); });
         break;
       case 'testActive':
-        await runInlineTest(connections, identities);
+        await runInlineTest(connections);
         render();
         break;
-      case 'recheckKits': {
-        const changed = await refreshKitAccessForActive(connections, identities, { force: true });
-        const conn = connections.getActive();
-        const granted = conn ? Object.entries(conn.kitAccess ?? {}).filter(([, v]) => v.granted).map(([k]) => k) : [];
-        const denied  = conn ? Object.entries(conn.kitAccess ?? {}).filter(([, v]) => !v.granted).map(([k]) => k) : [];
-        const parts = [];
-        if (granted.length) parts.push(`granted: ${granted.join(', ')}`);
-        if (denied.length)  parts.push(`denied: ${denied.join(', ')}`);
-        vscode.window.showInformationMessage(`Kit access re-checked. ${parts.join(' | ') || 'no kits configured.'}`);
-        if (changed) render();
-        break;
-      }
       case 'refresh':
         render();
         break;
@@ -76,69 +63,66 @@ export function openDashboard(
 
   function render(): void {
     if (!panel) return;
-    panel.webview.html = renderHtml(ctx, connections, identities);
+    panel.webview.html = renderHtml(ctx, connections);
   }
   renderFn = render;
 
   render();
   // Trigger live kit-access probe in background; re-render when results change.
-  void refreshKitAccessForActive(connections, identities).then(changed => { if (changed) render(); });
+  void refreshKitAccessForActive(connections).then(changed => { if (changed) render(); });
 }
 
 export function refreshDashboard(): void {
   if (renderFn) renderFn();
 }
 
-async function runInlineTest(connections: ConnectionStore, identities: IdentityStore): Promise<void> {
+async function runInlineTest(connections: ConnectionStore): Promise<void> {
   const conn = connections.getActive();
   if (!conn) { lastTestResult = undefined; return; }
-  const id = identities.get(conn.identityId);
-  if (!id) {
-    lastTestResult = { connectionId: conn.id, ok: false, message: 'Connection has no identity assigned.', whenIso: new Date().toISOString() };
-    return;
-  }
-  const pat = await identities.getSecret(id.id);
-  if (!pat) {
-    lastTestResult = { connectionId: conn.id, ok: false, message: 'Identity has no stored PAT.', whenIso: new Date().toISOString() };
+  if (!conn.microsoftAccountId) {
+    lastTestResult = { connectionId: conn.id, ok: false, message: 'Connection is not signed in. Edit it and click Sign in.', whenIso: new Date().toISOString() };
     return;
   }
   lastTestResult = { connectionId: conn.id, ok: false, message: 'Testing...', whenIso: new Date().toISOString() };
-  const result = await testProject(conn.adoOrgUrl, conn.adoProject, id.email, pat);
+  let token: string | undefined;
+  try {
+    token = await getAdoTokenSilent(conn.microsoftAccountId, conn.microsoftAccountLabel);
+    if (!token) token = await getAdoTokenInteractive(conn.microsoftAccountId, conn.microsoftAccountLabel);
+  } catch (e) {
+    lastTestResult = { connectionId: conn.id, ok: false, message: `Could not get an ADO token: ${(e as Error).message ?? e}`, whenIso: new Date().toISOString() };
+    return;
+  }
+  const result = await testProjectWithAuth(conn.adoOrgUrl, conn.adoProject, `Bearer ${token}`);
   lastTestResult = result.ok
     ? { connectionId: conn.id, ok: true, message: `Connection successful.`, whenIso: new Date().toISOString() }
-    : { connectionId: conn.id, ok: false, message: `Failed: HTTP ${result.status} ${result.reason}. Check Org URL, Project, and PAT scopes.`, whenIso: new Date().toISOString() };
+    : { connectionId: conn.id, ok: false, message: `Failed: HTTP ${result.status} ${result.reason}. Check Org URL, Project, or your account access.`, whenIso: new Date().toISOString() };
+  // Refresh customer kit access (e.g. Spec Kit visibility) so the dashboard is in sync.
+  if (result.ok) {
+    try { await refreshKitAccessForActive(connections, { force: true }); } catch { /* non-fatal */ }
+  }
 }
 
-function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, identities: IdentityStore): string {
+function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore): string {
   const conns = connections.loadAll();
-  const ids = identities.loadAll();
   const active = connections.getActive();
   const lastNuGet = ctx.globalState.get<LastNuGetResult>(LAST_NUGET_RESULT_KEY);
   const lastDevTasks = ctx.globalState.get<LastDevTaskResult>(LAST_DEVTASKS_RESULT_KEY);
   const roles = vscode.workspace.getConfiguration('d365fo').get<string[]>('myRoles', ['dev-lead']);
   const agentCount = ctx.globalState.get<{ id: string }[]>('d365fo.agents.global', []).length;
 
-  // Top block: walk the user through setup in order (Identity -> Connection -> Active).
+  // Top block: walk the user through setup in order (Connection -> Active).
   let topBlock: string;
-  if (ids.length === 0) {
+  if (conns.length === 0) {
     topBlock = `<div class="active none">
          <div>
-           <div class="active-label">STEP 1 OF 2</div>
-           <div style="margin-top:4px;">Add an identity (your ADO email + PAT) to get started.</div>
+           <div class="active-label">GET STARTED</div>
+           <div style="margin-top:4px;">Add a project connection (ADO email, PAT, project) to start. Optionally add a SharePoint site URL.</div>
          </div>
-         <button class="btn-primary" data-cmd="d365fo.identities.add">+ Add identity</button>
-       </div>`;
-  } else if (conns.length === 0) {
-    topBlock = `<div class="active none">
-         <div>
-           <div class="active-label">STEP 2 OF 2</div>
-           <div style="margin-top:4px;">Add a connection - one per ADO project you work on.</div>
-         </div>
-         <button class="btn-primary" data-cmd="d365fo.connections.add">+ Add connection</button>
+         <button class="btn-primary" data-cmd="d365fo.connections.add">+ Add project connection</button>
        </div>`;
   } else if (!active) {
     topBlock = `<div class="active none">
-         <div>No active connection. Pick one below by clicking <b>Set active</b>.</div>
+         <div>No active project connection. Pick one below by clicking <b>Set active</b>.</div>
        </div>`;
   } else {
     const showResult = lastTestResult && lastTestResult.connectionId === active.id;
@@ -151,13 +135,13 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     topBlock = `<div class="active">
          <div class="active-row">
            <div>
-             <div class="active-label">ACTIVE CONNECTION</div>
+             <div class="active-label">ACTIVE PROJECT CONNECTION</div>
              <div class="active-name">${esc(active.name)}</div>
              <div class="active-meta">${esc(active.adoProject)} <span class="muted">- ${esc(active.adoOrgUrl)}</span></div>
+             <div class="active-meta muted">Signed in as ${esc(active.displayName ? `${active.displayName} (${active.email})` : (active.email ?? ''))}</div>
            </div>
            <div class="active-actions">
-             <button class="btn-primary" data-action="testActive">Test</button>
-             <button class="btn-secondary" data-action="recheckKits" title="Re-check whether your identity has access to any customer kits (e.g. CB Spec Kit)">Re-check kits</button>
+             <button class="btn-primary" data-action="testActive" title="Verify your account can reach the configured ADO org and project, and refresh which customer kits (e.g. Spec Kit) you have access to">Test connection</button>
              <button class="btn-secondary" data-cmd-item="d365fo.connections.edit" data-item-key="connection" data-payload='${escAttr(JSON.stringify(active))}'>Edit</button>
            </div>
          </div>
@@ -166,7 +150,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
   }
 
   const connRows = conns.length === 0
-    ? `<tr><td colspan="4" class="empty">No connections yet. <a data-cmd="d365fo.connections.add">+ Add one</a></td></tr>`
+    ? `<tr><td colspan="4" class="empty">No project connections yet. <a data-cmd="d365fo.connections.add">+ Add one</a></td></tr>`
     : conns.map(c => {
         const isActive = c.id === active?.id;
         const star = isActive ? '<span class="star" title="Active">*</span>' : '';
@@ -174,7 +158,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
         const payload = escAttr(JSON.stringify(c));
         return `<tr class="${isActive ? 'row-active' : ''}">
           <td>${star} <b>${esc(c.name)}</b></td>
-          <td>${esc(c.adoProject)}</td>
+          <td>${esc(c.adoProject)} <span class="muted">- ${esc(c.email ?? '')}</span></td>
           <td class="muted">${esc(c.adoOrgUrl)}</td>
           <td class="actions-cell">
             ${setBtn}
@@ -184,19 +168,6 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
         </tr>`;
       }).join('\n');
 
-  const identRows = ids.length === 0
-    ? `<tr><td colspan="3" class="empty">No identities yet. <a data-cmd="d365fo.identities.add">+ Add one</a></td></tr>`
-    : ids.map(i => {
-        const payload = escAttr(JSON.stringify(i));
-        return `<tr>
-          <td><b>${esc(i.displayName)}</b></td>
-          <td class="muted">${esc(i.email)}</td>
-          <td class="actions-cell">
-            <button class="btn-tiny" data-cmd-item="d365fo.identities.edit" data-item-key="identity" data-payload='${payload}'>Edit</button>
-            <button class="btn-tiny btn-danger" data-cmd-item="d365fo.identities.delete" data-item-key="identity" data-payload='${payload}'>Delete</button>
-          </td>
-        </tr>`;
-      }).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 24px 32px; max-width: 1100px; }
@@ -222,12 +193,12 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     .empty a { color: var(--vscode-textLink-foreground); cursor: pointer; }
     .table-header { display: flex; align-items: center; justify-content: space-between; margin: 28px 0 10px; }
     .table-header h2 { margin: 0; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 8px; }
-    .tile { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border); padding: 14px 16px; border-radius: 6px; cursor: pointer; transition: border-color 0.1s, transform 0.05s; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 8px; }
+    .tile { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border); padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: border-color 0.1s, transform 0.05s; }
     .tile:hover:not(.disabled) { border-color: var(--vscode-focusBorder); }
     .tile:active:not(.disabled) { transform: scale(0.99); }
-    .tile h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
-    .tile p { margin: 0; font-size: 12px; color: var(--vscode-descriptionForeground); }
+    .tile h3 { margin: 0 0 2px; font-size: 12px; font-weight: 600; }
+    .tile p { margin: 0; font-size: 11px; color: var(--vscode-descriptionForeground); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     .tile.disabled { opacity: 0.5; cursor: not-allowed; }
     button { font-family: var(--vscode-font-family); font-size: 12px; cursor: pointer; border-radius: 2px; border: none; padding: 5px 12px; }
     .btn-primary { background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
@@ -293,20 +264,11 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     </div>
 
     <div class="table-header">
-      <h2>Identities (${ids.length})</h2>
-      <button class="add-btn" data-cmd="d365fo.identities.add">+ New identity</button>
-    </div>
-    <table>
-      <thead><tr><th>Display name</th><th>Email</th><th></th></tr></thead>
-      <tbody>${identRows}</tbody>
-    </table>
-
-    <div class="table-header">
       <h2>Connections (${conns.length})</h2>
       <button class="add-btn" data-cmd="d365fo.connections.add">+ New connection</button>
     </div>
     <table>
-      <thead><tr><th>Name</th><th>Project</th><th>Org URL</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Project / Email</th><th>Org URL</th><th></th></tr></thead>
       <tbody>${connRows}</tbody>
     </table>
 
@@ -425,8 +387,8 @@ function renderCbSpecKitTile(c: Connection): string {
   const shCount = kd.stakeholders?.length ?? 0;
   const configured = ceCount + tkCount + shCount > 0;
   return `<div class="tile tile-snap">
-    <h3>CB Spec Kit</h3>
-    <p>Carlsberg overlay: custom fields, stakeholder mentions, reviewer defaults</p>
+    <h3>Spec Kit</h3>
+    <p>Customer overlay: custom fields, stakeholder mentions, reviewer defaults</p>
     ${configured ? `<div class="snap ok">
       <div class="snap-row"><span class="snap-label">Configured</span><span class="snap-when">overlay active</span></div>
       <div class="snap-stats"><b>${ceCount}</b> CE fields, <b>${tkCount}</b> task fields, <b>${shCount}</b> stakeholders</div>

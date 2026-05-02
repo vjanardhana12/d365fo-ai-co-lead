@@ -27,7 +27,7 @@ export class ConnectionItem extends vscode.TreeItem {
   constructor(public readonly connection: Connection, isActive: boolean) {
     super(connection.name, vscode.TreeItemCollapsibleState.None);
     this.description = `${connection.adoProject}${isActive ? '  (active)' : ''}`;
-    this.tooltip = `${connection.name}${isActive ? ' (active)' : ''}\n${connection.adoOrgUrl}/${connection.adoProject}\nIdentity: ${connection.identityId || '(none)'}`;
+    this.tooltip = `${connection.name}${isActive ? ' (active)' : ''}\n${connection.adoOrgUrl}/${connection.adoProject}\nEmail: ${connection.email || '(none)'}`;
     this.contextValue = 'connection';
     this.iconPath = new vscode.ThemeIcon(isActive ? 'star-full' : 'plug');
   }

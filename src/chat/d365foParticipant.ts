@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ConnectionStore } from '../services/connectionStore';
-import { IdentityStore } from '../services/identityStore';
 import { AgentRegistry } from '../services/agentRegistry';
-import { testProject } from '../services/adoClient';
+import { testProjectWithAuth } from '../services/adoClient';
+import { getAdoTokenInteractive } from '../services/microsoftAuth';
 
 /**
  * Registers the D365 F&O AI Co-Lead chat participants.
@@ -16,7 +16,6 @@ import { testProject } from '../services/adoClient';
 export function registerChatParticipants(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
   agents: AgentRegistry,
 ): void {
   // Master / orchestrator
@@ -73,7 +72,7 @@ export function registerChatParticipants(
     ['HLD outlines', 'Integration design', 'ARB checklist', 'Cross-module impact analysis']);
   registerRolePartner(ctx, 'd365fo.fc',         'Functional Consultant',  'fc',
     ['FDD authoring', 'Fit / gap analysis', 'Configuration workbook', 'UAT script drafts']);
-  registerDevLead(ctx, connections, identities);
+  registerDevLead(ctx, connections);
   registerRolePartner(ctx, 'd365fo.developer',  'Developer',              'developer',
     ['Implement TDD via D365FODevMCP', 'Fix BP / UT errors', 'Generate labels', 'X++ pattern help']);
   registerRolePartner(ctx, 'd365fo.tester',     'Tester',                 'tester',
@@ -106,7 +105,7 @@ function registerRolePartner(ctx: vscode.ExtensionContext, id: string, displayNa
   });
 }
 
-function registerDevLead(ctx: vscode.ExtensionContext, connections: ConnectionStore, identities: IdentityStore): void {
+function registerDevLead(ctx: vscode.ExtensionContext, connections: ConnectionStore): void {
   registerOne(ctx, 'd365fo.devLead', async (request, _c, stream, _t) => {
     const cmd = request.command;
     const prompt = request.prompt.trim();
@@ -122,13 +121,13 @@ function registerDevLead(ctx: vscode.ExtensionContext, connections: ConnectionSt
       case 'test': {
         const conn = connections.getActive();
         if (!conn) { stream.markdown('No active connection.'); stream.button({ command: 'd365fo.connections.add', title: '+ Add connection' }); return; }
-        const id = identities.get(conn.identityId);
-        if (!id) { stream.markdown('Active connection has no identity.'); return; }
-        const pat = await identities.getSecret(id.id);
-        if (!pat) { stream.markdown('Identity has no stored PAT.'); return; }
+        if (!conn.microsoftAccountId) { stream.markdown('Active connection is not signed in. Edit it and click Sign in.'); return; }
         stream.progress(`Testing ${conn.name}...`);
-        const result = await testProject(conn.adoOrgUrl, conn.adoProject, id.email, pat);
-        stream.markdown(result.ok ? `âœ“ Reached **${conn.adoProject}** on ${conn.adoOrgUrl}` : `âœ— HTTP ${result.status} ${result.reason}`);
+        let token: string;
+        try { token = await getAdoTokenInteractive(conn.microsoftAccountId, conn.microsoftAccountLabel); }
+        catch (e) { stream.markdown(`Could not get an ADO token: ${(e as Error).message ?? e}`); return; }
+        const result = await testProjectWithAuth(conn.adoOrgUrl, conn.adoProject, `Bearer ${token}`);
+        stream.markdown(result.ok ? `\u2713 Reached **${conn.adoProject}** on ${conn.adoOrgUrl}` : `\u2717 HTTP ${result.status} ${result.reason}`);
         return;
       }
     }

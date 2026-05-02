@@ -40,12 +40,25 @@ export interface Connection {
   name: string;
   adoOrgUrl: string;
   adoProject: string;
-  identityId: string;
+  /** Optional secondary ADO project in the same org (e.g. a sister/admin project). */
+  adoProjectSecondary?: string;
+  /** ADO email (used as username for Basic auth). Was previously on Identity. */
+  email: string;
+  /** Microsoft account id captured at sign-in (vscode.authentication 'microsoft' provider). When set, we use Bearer (OAuth) auth instead of PAT. */
+  microsoftAccountId?: string;
+  /** Display label of the signed-in Microsoft account (typically the UPN/email). Used as a hint when re-acquiring the session silently. */
+  microsoftAccountLabel?: string;
+  /** Friendly display name of the signed-in user (e.g. "Vinod Kumar K J"), best-effort fetched from the ADO profile endpoint. */
+  displayName?: string;
+  /** @deprecated kept for migration - use email + patSecretKey on Connection. */
+  identityId?: string;
   workingFolder?: string;
   notes?: string;
   lastUsedUtc?: string;
   /** Optional SharePoint site URL (e.g. https://contoso.sharepoint.com/sites/MyTeam). Auth uses VS Code's built-in Microsoft provider — no PAT needed. */
   sharepointSiteUrl?: string;
+  /** Per-connection PAT secret key (SecretStorage). Set on save when user provides a PAT. */
+  patSecretKey?: string;
   /** Optional project specification — populated by Project Initiation Kit. */
   projectSpec?: ProjectSpec;
   /**
@@ -92,7 +105,50 @@ export class ConnectionStore {
     }
   }
 
+  /** Read this connection's PAT from SecretStorage. */
+  async getPat(connId: string): Promise<string | undefined> {
+    const c = this.loadAll().find(x => x.id === connId);
+    if (!c?.patSecretKey) return undefined;
+    return this.ctx.secrets.get(c.patSecretKey);
+  }
+
+  /** Store a PAT for this connection (creates a secret key if missing). Returns the conn with patSecretKey populated. */
+  async setPat(conn: Connection, pat: string): Promise<Connection> {
+    if (!conn.patSecretKey) conn.patSecretKey = `d365fo.conn.pat.${crypto.randomBytes(8).toString('hex')}`;
+    await this.ctx.secrets.store(conn.patSecretKey, pat);
+    return conn;
+  }
+
+  newPatSecretKey(): string { return `d365fo.conn.pat.${crypto.randomBytes(8).toString('hex')}`; }
+
   newId(): string { return crypto.randomBytes(8).toString('hex'); }
+
+  /**
+   * One-time migration: copy email + PAT from old Identity store onto each Connection.
+   * Safe to run repeatedly; only acts on connections still using identityId without email/patSecretKey.
+   */
+  async migrateFromIdentities(legacyIdentities: { id: string; email: string; secretKey: string }[], legacySecrets: vscode.SecretStorage): Promise<number> {
+    const all = this.loadAll();
+    let migrated = 0;
+    for (const c of all) {
+      if (c.email && c.patSecretKey) continue; // already migrated
+      const legacy = legacyIdentities.find(i => i.id === c.identityId);
+      if (!legacy) continue;
+      if (!c.email) c.email = legacy.email;
+      if (!c.patSecretKey) {
+        const oldPat = await legacySecrets.get(legacy.secretKey);
+        if (oldPat) {
+          c.patSecretKey = this.newPatSecretKey();
+          await this.ctx.secrets.store(c.patSecretKey, oldPat);
+        }
+      }
+      migrated++;
+    }
+    if (migrated > 0) {
+      void this.storage().update(KEY, all);
+    }
+    return migrated;
+  }
 
   private storage(): vscode.Memento {
     const mode = vscode.workspace.getConfiguration('d365fo').get<string>('storageMode', 'global');

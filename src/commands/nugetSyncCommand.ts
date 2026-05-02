@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { ConnectionStore } from '../services/connectionStore';
-import { IdentityStore } from '../services/identityStore';
 import { runNuGetSync } from '../services/nugetSyncRunner';
 import { showForm } from '../views/formWebview';
 
@@ -20,7 +19,6 @@ function getChannel(): vscode.OutputChannel {
 export function registerNuGetSyncCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
 ): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('d365fo.nugetSync.showOutput', () => {
@@ -29,10 +27,9 @@ export function registerNuGetSyncCommand(
     vscode.commands.registerCommand('d365fo.nugetSync.run', async (opts?: { useLast?: boolean }) => {
       const conn = connections.getActive();
       if (!conn) { vscode.window.showWarningMessage('No active connection. Add one first.'); return; }
-      const identity = identities.get(conn.identityId);
-      if (!identity) { vscode.window.showWarningMessage('Active connection has no identity.'); return; }
-      const pat = await identities.getSecret(identity.id);
-      if (!pat) { vscode.window.showWarningMessage('Identity has no stored PAT.'); return; }
+      if (!conn.email) { vscode.window.showWarningMessage('Connection has no email. Edit it.'); return; }
+      const pat = await connections.getPat(conn.id);
+      if (!pat) { vscode.window.showWarningMessage('Connection has no stored PAT. Edit it.'); return; }
 
       const last = ctx.globalState.get<LastNuGet>(LAST_NUGET_KEY) ?? { feedUrl: '', feedName: '', packageFolder: '', force: 'No' };
 
@@ -41,7 +38,7 @@ export function registerNuGetSyncCommand(
       if (opts?.useLast && last.feedUrl && last.packageFolder) {
         result = { ...last };
       } else {
-        result = await showForm(
+        result = (await showForm(
           ctx,
           `NuGet Sync - ${conn.name}`,
           [
@@ -65,7 +62,7 @@ export function registerNuGetSyncCommand(
             ]},
           ],
           'Run sync',
-        );
+        )) as typeof result;
       }
       if (!result) return;
 
@@ -124,7 +121,7 @@ export function registerNuGetSyncCommand(
       const exit = await runNuGetSync({
         feedUrl: result.feedUrl.trim(),
         feedName,
-        email: identity.email,
+        email: conn.email,
         pat,
         packageFolder: result.packageFolder.trim(),
         force: result.force === 'Yes',

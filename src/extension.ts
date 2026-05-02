@@ -3,10 +3,8 @@ import { ConnectionStore } from './services/connectionStore';
 import { IdentityStore } from './services/identityStore';
 import { AgentRegistry } from './services/agentRegistry';
 import { ConnectionsTreeProvider } from './views/connectionsTreeProvider';
-import { IdentitiesTreeProvider } from './views/identitiesTreeProvider';
 import { openDashboard, refreshDashboard } from './views/dashboardWebview';
 import { registerConnectionCommands } from './commands/connectionCommands';
-import { registerIdentityCommands } from './commands/identityCommands';
 import { registerNuGetSyncCommand } from './commands/nugetSyncCommand';
 import { registerDevTasksCommand } from './commands/devTasksCommand';
 import { registerProjectKitCommand } from './commands/projectKitCommand';
@@ -20,36 +18,35 @@ let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext): void {
   const connectionStore = new ConnectionStore(context);
-  const identityStore = new IdentityStore(context);
   const agentRegistry = new AgentRegistry(context);
   agentRegistry.seedDefaults();
 
-  // Tree views
+  // One-time migration: copy email + PAT from legacy IdentityStore onto Connections.
+  // The Identity concept has been merged into Connection (one connection = one ADO email + PAT).
+  void migrateLegacyIdentities(context, connectionStore);
+
+  // Tree views (only Connections — Identities view removed in v1.0.x merge)
   const connectionsTree = new ConnectionsTreeProvider(connectionStore);
-  const identitiesTree = new IdentitiesTreeProvider(identityStore);
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider('d365fo.connections', connectionsTree),
-    vscode.window.registerTreeDataProvider('d365fo.identities', identitiesTree),
   );
 
   // Commands
-  registerConnectionCommands(context, connectionStore, identityStore, connectionsTree, () => updateStatusBar(connectionStore));
-  registerIdentityCommands(context, identityStore, identitiesTree);
-  registerNuGetSyncCommand(context, connectionStore, identityStore);
-  registerDevTasksCommand(context, connectionStore, identityStore);
-  registerProjectKitCommand(context, connectionStore, identityStore);
-  registerCbSpecKitCommand(context, connectionStore, identityStore);
+  registerConnectionCommands(context, connectionStore, connectionsTree, () => updateStatusBar(connectionStore));
+  registerNuGetSyncCommand(context, connectionStore);
+  registerDevTasksCommand(context, connectionStore);
+  registerProjectKitCommand(context, connectionStore);
+  registerCbSpecKitCommand(context, connectionStore);
   registerManageAgentsCommand(context, agentRegistry, connectionStore);
   registerAiModeCommands(context, connectionStore);
   registerSharePointCommands(context, connectionStore);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('d365fo.openDashboard', () =>
-      openDashboard(context, connectionStore, identityStore)),
+      openDashboard(context, connectionStore)),
     vscode.commands.registerCommand('d365fo.dashboard.refresh', () => refreshDashboard()),
     vscode.commands.registerCommand('d365fo.refresh', () => {
       connectionsTree.refresh();
-      identitiesTree.refresh();
       updateStatusBar(connectionStore);
       refreshDashboard();
     }),
@@ -78,7 +75,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   // Chat participants (master + 6 role-specific)
-  registerChatParticipants(context, connectionStore, identityStore, agentRegistry);
+  registerChatParticipants(context, connectionStore, agentRegistry);
 
   // Status bar
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -111,3 +108,23 @@ function updateStatusBar(store: ConnectionStore): void {
 }
 
 export function deactivate(): void { /* nothing to clean up */ }
+
+/**
+ * Best-effort one-shot migration from the legacy IdentityStore to the merged
+ * Connection model. Safe to run on every activation — it only acts on
+ * connections that don't yet have email + patSecretKey.
+ */
+async function migrateLegacyIdentities(ctx: vscode.ExtensionContext, connections: ConnectionStore): Promise<void> {
+  try {
+    const legacy = new IdentityStore(ctx);
+    const all = legacy.loadAll();
+    if (all.length === 0) return;
+    const n = await connections.migrateFromIdentities(
+      all.map(i => ({ id: i.id, email: i.email, secretKey: i.secretKey })),
+      ctx.secrets,
+    );
+    if (n > 0) {
+      vscode.window.setStatusBarMessage(`D365 F&O Co-Lead: migrated ${n} identity${n === 1 ? '' : 's'} into connections.`, 5000);
+    }
+  } catch (_e) { /* migration is best-effort */ }
+}

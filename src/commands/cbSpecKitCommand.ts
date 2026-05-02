@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { ConnectionStore } from '../services/connectionStore';
 import { showForm } from '../views/formWebview';
 import { isKitGranted, refreshKitAccessForActive } from '../services/kitAccessProbe';
-import { IdentityStore } from '../services/identityStore';
 
 /**
  * Carlsberg-specific kit overlay. Stored under
@@ -38,7 +37,6 @@ const DEFAULTS: CarlsbergKitData = {
 export function registerCbSpecKitCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
 ): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('d365fo.cbSpecKit.edit', async () => {
@@ -46,7 +44,7 @@ export function registerCbSpecKitCommand(
       if (!conn) { vscode.window.showWarningMessage('No active project. Create one via Project Initiation Kit first.'); return; }
 
       // Live access gate: re-check if needed, then refuse if not granted.
-      await refreshKitAccessForActive(connections, identities);
+      await refreshKitAccessForActive(connections);
       const fresh = connections.getActive();
       if (!isKitGranted(fresh, 'carlsberg')) {
         vscode.window.showWarningMessage(

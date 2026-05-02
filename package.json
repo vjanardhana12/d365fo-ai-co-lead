@@ -49,27 +49,17 @@
     "views": {
       "d365fo": [
         {
-          "id": "d365fo.identities",
-          "name": "Identities",
-          "icon": "media/activitybar.svg",
-          "contextualTitle": "D365 F&O Identities"
-        },
-        {
           "id": "d365fo.connections",
-          "name": "Connections",
+          "name": "Project Connections",
           "icon": "media/activitybar.svg",
-          "contextualTitle": "D365 F&O Connections"
+          "contextualTitle": "D365 F&O Project Connections"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "d365fo.identities",
-        "contents": "Identities are *who* you authenticate as (display name + email + ADO PAT).\n\n[+ Add identity](command:d365fo.identities.add)\n[Open dashboard](command:d365fo.openDashboard)\n\n[Learn more](https://github.com/vjanardhana12/d365fo-ai-co-lead#readme)"
-      },
-      {
         "view": "d365fo.connections",
-        "contents": "Connections bind an identity to an ADO project (one connection per project).\n\n[+ Add connection](command:d365fo.connections.add)\n[Open dashboard](command:d365fo.openDashboard)\n\nAdd an identity first if you haven't yet."
+        "contents": "A project connection holds your Microsoft sign-in + ADO project (one per ADO project), plus an optional SharePoint site URL. No PAT required - signs you in to Azure DevOps via your Microsoft account.\n\n[+ Add project connection](command:d365fo.connections.add)\n[Open dashboard](command:d365fo.openDashboard)\n\n[Learn more](https://github.com/vjanardhana12/d365fo-ai-co-lead#readme)"
       }
     ],
     "commands": [
@@ -85,17 +75,17 @@
       },
       {
         "command": "d365fo.connections.add",
-        "title": "Add Connection",
+        "title": "Add Project Connection",
         "icon": "$(add)"
       },
       {
         "command": "d365fo.connections.edit",
-        "title": "Edit Connection",
+        "title": "Edit Project Connection",
         "icon": "$(edit)"
       },
       {
         "command": "d365fo.connections.delete",
-        "title": "Delete Connection",
+        "title": "Delete Project Connection",
         "icon": "$(trash)"
       },
       {
@@ -109,22 +99,7 @@
         "icon": "$(star)"
       },
       {
-        "command": "d365fo.identities.add",
-        "title": "Add Identity",
-        "icon": "$(add)"
-      },
-      {
-        "command": "d365fo.identities.edit",
-        "title": "Edit Identity",
-        "icon": "$(edit)"
-      },
-      {
-        "command": "d365fo.identities.delete",
-        "title": "Delete Identity",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "d365fo.identities.openPatPage",
+        "command": "d365fo.connections.openPatPage",
         "title": "D365FO: Open ADO PAT Page",
         "icon": "$(key)"
       },
@@ -188,7 +163,7 @@
       "view/title": [
         {
           "command": "d365fo.openDashboard",
-          "when": "view == d365fo.identities || view == d365fo.connections",
+          "when": "view == d365fo.connections",
           "group": "navigation@0"
         },
         {
@@ -199,16 +174,6 @@
         {
           "command": "d365fo.refresh",
           "when": "view == d365fo.connections",
-          "group": "navigation@2"
-        },
-        {
-          "command": "d365fo.identities.add",
-          "when": "view == d365fo.identities",
-          "group": "navigation@1"
-        },
-        {
-          "command": "d365fo.refresh",
-          "when": "view == d365fo.identities",
           "group": "navigation@2"
         }
       ],
@@ -231,16 +196,6 @@
         {
           "command": "d365fo.connections.delete",
           "when": "view == d365fo.connections && viewItem == connection",
-          "group": "9@1"
-        },
-        {
-          "command": "d365fo.identities.edit",
-          "when": "view == d365fo.identities && viewItem == identity",
-          "group": "1@1"
-        },
-        {
-          "command": "d365fo.identities.delete",
-          "when": "view == d365fo.identities && viewItem == identity",
           "group": "9@1"
         }
       ]

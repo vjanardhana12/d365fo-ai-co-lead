@@ -1,13 +1,15 @@
 import * as vscode from 'vscode';
 import { Connection, ConnectionStore, ProjectSpec } from '../services/connectionStore';
-import { IdentityStore } from '../services/identityStore';
 import { showForm } from '../views/formWebview';
 import { importFromWorkspaceFolder, WorkspaceImport } from '../services/workspaceImporter';
+import { normalizeAdoOrgUrl, normalizeSharePointSiteUrl } from '../services/urlNormalizers';
+import { testProjectWithAuth, getProfileWithAuth } from '../services/adoClient';
+import { signInPreferringEmail, getAdoTokenInteractive, getKnownAccounts } from '../services/microsoftAuth';
+import { FieldActionResult } from '../views/formWebview';
 
 export function registerProjectKitCommand(
   ctx: vscode.ExtensionContext,
   connections: ConnectionStore,
-  identities: IdentityStore,
 ): void {
   ctx.subscriptions.push(
     vscode.commands.registerCommand('d365fo.projectKit.init', async () => {
@@ -39,38 +41,45 @@ export function registerProjectKitCommand(
         }
       }
 
-      // Identity must exist
-      if (identities.loadAll().length === 0) {
-        const ok = await vscode.window.showWarningMessage(
-          'You need an identity first.', { modal: true }, 'Add identity',
-        );
-        if (ok !== 'Add identity') return;
-        await vscode.commands.executeCommand('d365fo.identities.add');
-        if (identities.loadAll().length === 0) return;
-      }
-      const idOptions = identities.loadAll().map(i => ({ value: i.id, label: i.displayName, description: i.email }));
+      // Sign-in is captured inline by the 'Sign in' button on the email field.
+      let signedInAccountId: string | undefined;
+      let signedInEmail: string | undefined;
+      let signedInDisplayName: string | undefined;
+      const knownAccounts = await getKnownAccounts();
+      const accountSuggestions = knownAccounts.map(a => a.label);
 
       const sug = imported?.suggested;
       const sp = imported?.spec;
 
       const result = await showForm(ctx, 'Project Initiation Kit', [
-        // ── Identity / connection ────────────────────────────────────
-        { key: 'name', label: 'Project name', type: 'text', required: true,
-          value: sug?.name, placeholder: 'e.g. My Project HUB',
-          help: 'Display name for this project connection.' },
+        { key: 'email', label: 'Email', type: 'emailSignIn', required: true,
+          value: undefined, placeholder: 'name@company.com',
+          actionLabel: 'Sign in',
+          suggestions: accountSuggestions,
+          help: 'Pick an account VS Code already knows or type a new email, then click Sign in. Browser/system dialog handles password and MFA.' },
 
-        { key: 'identityId', label: 'Identity', type: 'select', required: true,
-          value: idOptions[0]?.value, options: idOptions,
-          help: 'ADO PAT-bearing identity used for API calls.' },
+        { key: 'name', label: 'Project name', type: 'text', required: true,
+          value: sug?.name, placeholder: 'e.g. Alex - Contoso ERP',
+          help: 'Friendly label for this project connection - usually "<your name> - <project>".' },
+
         { key: 'adoOrgUrl', label: 'ADO Organization URL', type: 'text', required: true,
           value: sug?.adoOrgUrl ?? 'https://dev.azure.com/',
-          placeholder: 'https://dev.azure.com/<org>' },
+          placeholder: 'https://dev.azure.com/<org>',
+          help: 'Org URL. If you paste a full URL like https://dev.azure.com/<org>/<project>, the project will be auto-filled.' },
         { key: 'adoProject', label: 'ADO Project', type: 'text', required: true,
           value: sug?.adoProject, placeholder: 'Project name' },
-        { key: 'workingFolder', label: 'Working folder', type: 'folder',
-          value: sug?.workingFolder, placeholder: 'e.g. D:\\Repos\\YourProject' },
+        { key: 'adoProjectSecondary', label: 'Secondary ADO Project (optional)', type: 'text',
+          value: undefined, placeholder: 'Sister or admin project in the same org',
+          help: 'Optional. A second project in the same org that you also have access to. Tested separately - if the primary passes but the secondary fails, you can still save.' },
+        { key: 'sharepointSiteUrl', label: 'SharePoint site URL (optional)', type: 'text',
+          value: undefined,
+          placeholder: 'https://contoso.sharepoint.com/sites/YourTeam',
+          help: 'Optional. Paste any link from the SharePoint site - it will be normalized to the site root. Authenticates with the same Microsoft account.' },
+        { key: 'workingFolder', label: 'Working folder (optional)', type: 'folder',
+          value: sug?.workingFolder, placeholder: 'e.g. C:\\Work\\Contoso',
+          help: 'A scratch / staging folder for this project - design notes, exports, generated files.\nKeep it OUTSIDE your customer git repos to avoid accidentally committing tooling output.' },
 
-        // ── D365 F&O paths ───────────────────────────────────────────
+        // D365 F&O paths
         { key: 'prefix', label: 'Prefix (object name prefix)', type: 'text',
           value: sp?.prefix, placeholder: 'e.g. CHB' },
         { key: 'defaultModel', label: 'Default model (display name)', type: 'text',
@@ -99,8 +108,84 @@ export function registerProjectKitCommand(
           value: sp?.ceWorkItemType ?? 'Code Extensions' },
         { key: 'codeReviewPercent', label: 'Code Review % of CE (auto-calc default)', type: 'text',
           value: String(sp?.codeReviewPercent ?? 10) },
-      ], 'Save project connection');
+      ], {
+        submitLabel: 'Save',
+        onFieldAction: async (key, values): Promise<FieldActionResult> => {
+          if (key !== 'email') return { level: 'fail', message: `Unknown action: ${key}` };
+          const typed = (values.email || '').trim();
+          if (!typed) return { level: 'fail', message: 'Type your email address first, then click Sign in.' };
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(typed)) return { level: 'fail', message: `Not a valid email address: ${typed}` };
+          try {
+            const r = await signInPreferringEmail(typed);
+            signedInAccountId = r.accountId;
+            signedInEmail = r.email;
+            try {
+              const prof = await getProfileWithAuth(`Bearer ${r.accessToken}`);
+              if (prof.ok && prof.displayName) signedInDisplayName = prof.displayName;
+            } catch { /* ignore */ }
+            const matchesTyped = r.email.toLowerCase() === typed.toLowerCase();
+            const who = signedInDisplayName ? `${signedInDisplayName} (${r.email})` : r.email;
+            return {
+              level: matchesTyped ? 'ok' : 'warn',
+              message: matchesTyped ? `Signed in as ${who}.` : `Signed in as ${who} (you typed ${typed}).`,
+              fieldUpdates: { email: { value: r.email } },
+            };
+          } catch (e) {
+            return { level: 'fail', message: `Sign-in cancelled or failed: ${(e as Error)?.message ?? e}` };
+          }
+        },
+        onTest: async (values) => {
+          const orgParse = normalizeAdoOrgUrl(values.adoOrgUrl);
+          const project = (values.adoProject || orgParse.project || '').trim();
+          let secondary = (values.adoProjectSecondary || '').trim();
+          if (secondary && secondary.toLowerCase() === project.toLowerCase()) secondary = '';
+          if (!signedInAccountId) return { ok: false, message: 'Click Sign in next to your email first.' };
+          if (!orgParse.orgUrl) return { ok: false, message: 'Missing required field: ADO Org URL.' };
+          if (/^https?:\/\/(?:dev\.azure\.com|ssh\.dev\.azure\.com)\/?$/i.test(orgParse.orgUrl)) {
+            return { ok: false, message: 'ADO Org URL is missing the organization name. Expected https://dev.azure.com/<org>.' };
+          }
+          if (!project) return { ok: false, message: 'Missing required field: ADO Project.' };
+
+          let token: string;
+          try {
+            token = await getAdoTokenInteractive(signedInAccountId, signedInEmail);
+          } catch (e) {
+            return { ok: false, message: `Could not get an ADO token: ${(e as Error).message ?? e}` };
+          }
+          const auth = `Bearer ${token}`;
+
+          const r = await testProjectWithAuth(orgParse.orgUrl, project, auth);
+          if (!r.ok) {
+            const hint = r.status === 401 || r.status === 203
+              ? `Your account (${signedInEmail}) does not have access. Confirm the org name and that your account is a member.`
+              : `Check Org URL and project name.`;
+            return { ok: false, message: `Cannot reach ${project} (HTTP ${r.status} ${r.reason}). ${hint}` };
+          }
+          if (secondary) {
+            const r2 = await testProjectWithAuth(orgParse.orgUrl, secondary, auth);
+            if (!r2.ok) {
+              return { ok: true, level: 'warn', message: `Primary ${project} verified. Secondary ${secondary} unreachable (HTTP ${r2.status}). You can still save.` };
+            }
+            return { ok: true, message: `Connected as ${signedInEmail}. Verified access to ${project} and ${secondary}.` };
+          }
+          return { ok: true, message: `Connected as ${signedInEmail}. Verified access to ${project}.` };
+        },
+      });
       if (!result) return;
+      if (!signedInAccountId || !signedInEmail) {
+        vscode.window.showErrorMessage('You must Sign in before saving the project.');
+        return;
+      }
+      if ((result.email || '').trim().toLowerCase() !== signedInEmail.toLowerCase()) {
+        vscode.window.showErrorMessage(`Email field (${result.email}) does not match the signed-in account (${signedInEmail}). Click Sign in again with the new email.`);
+        return;
+      }
+
+      const orgParse = normalizeAdoOrgUrl(result.adoOrgUrl);
+      const project = (result.adoProject?.trim() || orgParse.project || '').replace(/^\/+|\/+$/g, '');
+      const sharepoint = result.sharepointSiteUrl ? normalizeSharePointSiteUrl(result.sharepointSiteUrl) : '';
+      let secondary = result.adoProjectSecondary?.trim() || '';
+      if (secondary && secondary.toLowerCase() === project.toLowerCase()) secondary = '';
 
       // Build ProjectSpec. The `kit` field is intentionally NOT collected
       // from the user — customer-specific kit tiles are gated by a live ADO
@@ -127,9 +212,14 @@ export function registerProjectKitCommand(
       const conn: Connection = {
         id: connections.newId(),
         name: result.name.trim(),
-        adoOrgUrl: result.adoOrgUrl.trim().replace(/\/+$/, ''),
-        adoProject: result.adoProject.trim().replace(/^\/+|\/+$/g, ''),
-        identityId: result.identityId,
+        email: signedInEmail,
+        microsoftAccountId: signedInAccountId,
+        microsoftAccountLabel: signedInEmail,
+        displayName: signedInDisplayName,
+        adoOrgUrl: orgParse.orgUrl,
+        adoProject: project,
+        adoProjectSecondary: secondary || undefined,
+        sharepointSiteUrl: sharepoint || undefined,
         workingFolder: nz(result.workingFolder),
         notes: undefined,
         lastUsedUtc: new Date().toISOString(),
