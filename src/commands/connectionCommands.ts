@@ -68,6 +68,7 @@ export function registerConnectionCommands(
       label: i.displayName,
       description: i.email,
     }));
+    idOptions.push({ value: '__NEW__', label: '+ Create new identity…', description: 'Opens the identity form first' });
 
     const result = await showForm(
       ctx,
@@ -84,7 +85,11 @@ export function registerConnectionCommands(
         { key: 'identityId', label: 'Identity', type: 'select', required: true,
           value: existing?.identityId ?? idOptions[0]?.value,
           options: idOptions,
-          help: 'Identity used to authenticate (PAT is stored encrypted).' },
+          help: 'Identity used to authenticate (PAT is stored encrypted). Pick "+ Create new identity…" to add one inline.' },
+        { key: 'sharepointSiteUrl', label: 'SharePoint site URL (optional)', type: 'text',
+          value: existing?.sharepointSiteUrl,
+          placeholder: 'https://contoso.sharepoint.com/sites/YourTeam',
+          help: 'Optional. When set, the dashboard shows a Browse SharePoint tile. Auth uses your Microsoft account via VS Code — no password or PAT stored.' },
         { key: 'workingFolder', label: 'Working folder (optional)', type: 'folder',
           value: existing?.workingFolder, placeholder: 'e.g. D:\\Repos\\YourProject' },
         { key: 'notes', label: 'Notes (optional)', type: 'textarea',
@@ -93,6 +98,30 @@ export function registerConnectionCommands(
       isEdit ? 'Update' : 'Save connection',
     );
     if (!result) return;
+
+    if (result.identityId === '__NEW__') {
+      const before = identities.loadAll().map(i => i.id);
+      await vscode.commands.executeCommand('d365fo.identities.add');
+      const after = identities.loadAll();
+      const newId = after.find(i => !before.includes(i.id));
+      if (!newId) {
+        vscode.window.showInformationMessage('Identity creation cancelled — connection not saved.');
+        return;
+      }
+      // Re-open the connection form with the new identity preselected.
+      const seed: Connection = {
+        id: existing?.id ?? '',
+        name: result.name.trim(),
+        adoOrgUrl: result.adoOrgUrl.trim(),
+        adoProject: result.adoProject.trim(),
+        identityId: newId.id,
+        sharepointSiteUrl: result.sharepointSiteUrl.trim() || undefined,
+        workingFolder: result.workingFolder.trim() || undefined,
+        notes: result.notes.trim() || undefined,
+      };
+      await editConnection(existing ? { ...existing, ...seed } : seed.id ? seed : { ...seed, id: '' } as Connection);
+      return;
+    }
 
     if (!/^https?:\/\/.+/.test(result.adoOrgUrl)) {
       vscode.window.showErrorMessage('ADO Org URL must start with https://');
@@ -105,6 +134,7 @@ export function registerConnectionCommands(
       adoOrgUrl: result.adoOrgUrl.trim().replace(/\/+$/, ''),
       adoProject: result.adoProject.trim().replace(/^\/+|\/+$/g, ''),
       identityId: result.identityId,
+      sharepointSiteUrl: result.sharepointSiteUrl?.trim() || undefined,
       workingFolder: result.workingFolder.trim() || undefined,
       notes: result.notes.trim() || undefined,
       lastUsedUtc: new Date().toISOString(),

@@ -177,6 +177,11 @@
         "command": "d365fo.setRoles",
         "title": "D365FO: Set My Role(s)",
         "icon": "$(person)"
+      },
+      {
+        "command": "d365fo.sharepoint.browse",
+        "title": "D365FO: Browse SharePoint files",
+        "icon": "$(cloud)"
       }
     ],
     "menus": {

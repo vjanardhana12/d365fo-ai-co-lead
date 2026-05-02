@@ -283,6 +283,7 @@ function renderHtml(ctx: vscode.ExtensionContext, connections: ConnectionStore, 
     <h2>${active ? `Project: ${esc(active.name)}` : 'Project'} <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:400;">${active ? renderProjectMeta(active) : '- pick or add a project to enable'}</span></h2>
     <div class="grid">
       ${active ? renderDevTasksTile(lastDevTasks) : `<div class="tile disabled"><h3>Create Dev Tasks</h3><p>Generate task hierarchy under a parent work item</p></div>`}
+      ${active ? renderSharePointTile(active) : ''}
       ${active && isKitGranted(active, 'carlsberg') ? renderCbSpecKitTile(active) : ''}
     </div>
 
@@ -488,6 +489,27 @@ function renderRoleBadges(roles: string[]): string {
   if (!roles || roles.length === 0) return 'set your role(s)';
   const badges = roles.map(r => `<span class="role-badge">${esc(ROLE_LABEL[r] ?? r)}</span>`).join(' ');
   return `Viewing as: ${badges}`;
+}
+
+function renderSharePointTile(conn: import('../services/connectionStore').Connection): string {
+  if (!conn.sharepointSiteUrl) {
+    return `<div class="tile">
+      <h3>SharePoint <span class="muted" style="font-weight:400;font-size:11px;">(not configured)</span></h3>
+      <p>Browse files from your project's SharePoint site. Sign-in uses your Microsoft account &mdash; no password stored.</p>
+      <div class="tile-actions">
+        <button class="btn-tiny" data-cmd-item="d365fo.connections.edit" data-item-key="connection" data-payload='${escAttr(JSON.stringify(conn))}'>Add SharePoint URL</button>
+      </div>
+    </div>`;
+  }
+  const host = (() => { try { return new URL(conn.sharepointSiteUrl).host; } catch { return conn.sharepointSiteUrl; } })();
+  return `<div class="tile">
+    <h3>SharePoint</h3>
+    <p>Browse <span class="muted">${esc(host)}</span></p>
+    <div class="tile-actions">
+      <button class="btn-primary" data-cmd="d365fo.sharepoint.browse">Browse files</button>
+      <button class="btn-tiny" data-cmd-args="vscode.open" data-args='${escAttr(JSON.stringify([conn.sharepointSiteUrl]))}'>Open site</button>
+    </div>
+  </div>`;
 }
 
 function renderManageAgentsTile(count: number): string {

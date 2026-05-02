@@ -44,6 +44,8 @@ export interface Connection {
   workingFolder?: string;
   notes?: string;
   lastUsedUtc?: string;
+  /** Optional SharePoint site URL (e.g. https://contoso.sharepoint.com/sites/MyTeam). Auth uses VS Code's built-in Microsoft provider — no PAT needed. */
+  sharepointSiteUrl?: string;
   /** Optional project specification — populated by Project Initiation Kit. */
   projectSpec?: ProjectSpec;
   /**

@@ -13,6 +13,7 @@ import { registerProjectKitCommand } from './commands/projectKitCommand';
 import { registerCbSpecKitCommand } from './commands/cbSpecKitCommand';
 import { registerManageAgentsCommand } from './commands/manageAgentsCommand';
 import { registerAiModeCommands } from './commands/aiModeCommands';
+import { registerSharePointCommands } from './commands/sharepointCommands';
 import { registerChatParticipants } from './chat/d365foParticipant';
 
 let statusBarItem: vscode.StatusBarItem;
@@ -40,6 +41,7 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCbSpecKitCommand(context, connectionStore, identityStore);
   registerManageAgentsCommand(context, agentRegistry, connectionStore);
   registerAiModeCommands(context, connectionStore);
+  registerSharePointCommands(context, connectionStore);
 
   context.subscriptions.push(
     vscode.commands.registerCommand('d365fo.openDashboard', () =>
